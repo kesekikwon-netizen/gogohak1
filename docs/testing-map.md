@@ -80,7 +80,7 @@ ctest --preset linux -j8 --timeout 180 -R '^(바꾼 시험 이름)$'          # 
 | Windows 전제로 보임(시험 이름·오류로 짐작, 확정 아님) | `survey_facts` · `home_cards` | Windows 경로 표기(`toNativeSeparators`, 네트워크 경로). |
 | | `cad_pending_copies` · `file_cleanup` | 열려 있는 파일을 지우지 못하는 Windows 잠금 동작. |
 | | `perf_engine` · `save_open_monitor` · `theme_qss` | 시간 예산(`startup_home 3320ms > 70ms`)·화면 크기·글꼴 기준이 Windows 기준값이다. |
-| 부하 때 흔들림 | `storage_safety` | 전체 병렬 실행에서만 실패하고 단독 재실행은 통과했다. |
+| 시험 자체의 리눅스 문제(2026-10-23 고침) | `storage_safety` | 흔들림이 아니었다. ① `persistWorkspace_staleWalDoesNotBlockSave`가 열려 있는 DB의 `-shm`을 비워 리눅스에서 SIGBUS로 죽었고(Windows는 공유 잠금으로 비울 수 없다) ② `recoveryPending_notesNewestAndPrunesOldCopies`는 쓰기 버퍼가 닫힐 때 비워지며 수정 시각이 덮였다. 두 곳을 고쳐 10번 연속 통과. |
 | 설치하면 풀림 | `georef_engine` · `georef_backup` · `workflow_engine` | `img.save(tif, "TIFF")` 실패: Qt TIFF 플러그인(`qt6-image-formats-plugins`)이 없다. |
 | 진짜 오류(5단계에서 고침) | `ui_terms` | 보고서 창 글자 4곳(`KaHwpReportStudio*.cpp`, `KaHwpLivePaperWindow.cpp`)에 금지된 「조판」이 보인다. Windows에서도 같다. |
 | 원인 미확인 | `longitude_ruler` · `topographic_merge` · `topographic_import` · `dem_legend` | 리눅스 한계인지 코드 문제인지 아직 모른다. Windows CI 결과로 가른다. |

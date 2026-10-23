@@ -503,7 +503,7 @@ class TestStorageSafety : public QObject {
       const QString snapshot = QDir(folder).filePath(QStringLiteral("복구조사.gpkg"));
       QFile file(snapshot);
       QVERIFY(file.open(QIODevice::ReadWrite));
-      QCOMPARE(file.write("x"), static_cast<qint64>(1));
+      QCOMPARE(file.write("x"), static_cast<qint64>(1)); QVERIFY(file.flush());  // 닫을 때 버퍼가 비워지며 수정 시각이 덮이지 않게
       QVERIFY(file.setFileTime(QDateTime(QDate(2026, 1, 1), QTime(0, i, 0)),
                                QFileDevice::FileModificationTime));
       file.close();
@@ -868,8 +868,8 @@ class TestStorageSafety : public QObject {
     first.setAttribute(QStringLiteral("note"), QStringLiteral("WAL"));
     first.setGeometry(QgsGeometry::fromRect(QgsRectangle(200000, 450000, 200010, 450010)));
     QVERIFY(area->addFeature(first));
-    QVERIFY(QFile(gpkg + QStringLiteral("-wal")).open(QIODevice::WriteOnly));
-    QVERIFY(QFile(gpkg + QStringLiteral("-shm")).open(QIODevice::WriteOnly));
+    const QIODevice::OpenMode keep = QSysInfo::productType() == QLatin1String("windows") ? QIODevice::NotOpen : QIODevice::Append;  // 리눅스는 열린 -shm 을 비우면 SIGBUS
+    for (const char* suffix : {"-wal", "-shm"}) QVERIFY(QFile(gpkg + QLatin1String(suffix)).open(QIODevice::WriteOnly | keep));
     const auto attempt = SurveyStorage::persistWorkspace(
         &project, gpkg, dir.filePath(QStringLiteral("복구사본")));
     QVERIFY2(attempt.saved, qPrintable(attempt.error));
