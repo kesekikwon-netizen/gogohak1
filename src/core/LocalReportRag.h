@@ -66,7 +66,7 @@ class LocalReportRag {
   static std::filesystem::path pipelineScriptPath();
   static std::filesystem::path ragDbPath();
 
-  // 시군구명을 광역권역(전남·전북·경북·경남·충남·충북·경기·강원·제주)으로 매핑
+  // 경로의 도 폴더 우선, 없으면 시군구 이름으로 광역권역을 짐작한다. 못 정하면 「미분류」
   static std::string classifyMacroRegion(std::string_view sigungu_utf8);
   // 자연어 질의에서 지역 범위(전국·전남·경북·복수지역 등)를 추출한다 (없으면 default_region_utf8)
   static std::string extractRegionScope(std::string_view prompt_utf8,

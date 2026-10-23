@@ -1805,6 +1805,11 @@ if(KA_HGIS_BUILD_TESTS)
   ka_add_qtest(network_services ka_network_tests)
   set_tests_properties(network_services PROPERTIES TIMEOUT 30)
 
+  add_executable(ka_report_region_tests tests/test_report_region.cpp)
+  target_link_libraries(ka_report_region_tests PRIVATE ka_core)
+  add_test(NAME report_region COMMAND ka_report_region_tests)
+  set_tests_properties(report_region PROPERTIES TIMEOUT 60)
+
   add_executable(ka_storage_safety_tests tests/test_storage_safety.cpp)
   target_link_libraries(ka_storage_safety_tests PRIVATE ka_core Qt6::Test)
   ka_add_qtest(storage_safety ka_storage_safety_tests)
