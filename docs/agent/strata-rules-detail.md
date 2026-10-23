@@ -1,4 +1,4 @@
-# Strata (ka-hgis) 세부 규칙
+# Strata (ka-hgis) 세부 규칙 (Antigravity 작업공간 규칙 포함)
 
 사용자는 고고학 현장 전문가다. 모든 안내와 보고는 간결한 한국어로 작성하고, 코드·파일·심볼은 클릭 가능한 링크로 제시한다.
 
@@ -78,7 +78,11 @@
 - 색·모양은 `KaTheme` 토큰과 `data/theme/ka-hgis.qss`만 쓴다. `setStyleSheet("#2563eb…")` 같은 위젯 고정 색 금지.
 - 「새 모양」 규칙(`KaThemePaper.cpp`): 한 화면에 채운 단추는 `@primary@` 하나 · 선택 칸은 `@chosenFill@` + 먹 테두리 · 현재 탭은 먹 밑줄 · 진행 단계는 홈 「작업 순서」 모양 · 연결 상태는 홈 「연결 상태」 모양 · 아이콘은 `KaIcons` 선 아이콘.
 
-## 7. 보고서(HWP·RAG·DBpia) 기능
-- 2026-10-23 사용자 결정: 보고서 기능은 앱 안 기능으로 인정한다(`docs/intent/2026-10-23-gogohak1-stabilize.md`).
+## 7. 보고서(HWP·RAG·DBpia) 기능과 Antigravity SDK 역할 분담
+- 2026-10-23 사용자 결정: 보고서 기능은 앱 안의 화면·기능으로 인정한다(`docs/intent/2026-10-23-gogohak1-stabilize.md`). **AI 처리는 계속 Antigravity SDK가 맡는다**(같은 날 사용자 재확인).
+- Antigravity SDK(파이썬)의 몫: 발굴조사보고서 RAG·DBpia AI 수집, 추출·교차검증·집필, 그림 생성, HWPX 작성. RAG MCP는 SDK가 쓰며 앱에 붙이지 않는다.
+- 앱의 몫: GIS(주변유적 추출, 500m/1000m 반경, 이격거리·방위·해발·유구 실측)와 보고서 화면. GIS 계산값은 SDK에 읽기 전용으로 준다(제안: strata-gis MCP 서버).
+- 목표(사용자 설명): 조사구역 주변 유적을 GIS가 뽑고, 반경 안 유적의 RAG 정보와 DBpia AI 정보를 합쳐 시굴 전 알아야 할 것·필요한 정보·연계 유적을 종합 평가한다.
+- `GisFactHarness::Ledger`(G 카드, `uncollectedDomains`)는 앱이 실제로 계산한 값만 담는 읽기 전용 GIS 실측 원장이며, SDK에 주는 계약의 출발점이다. WordCraft(`KaWordCraftLiveSync`)는 보고서 기능 설계에 끌어들이지 않는다.
+- 현재(2026-10-23) 코드에는 SDK 자체가 없다. `KaGeminiBridgeClient`가 앱 안에서 DBpia에 직접 질의하고, 별도 수집은 `scripts/gyeongju_rag/`(독립 SQLite, 다른 작업자가 수집 중)가 한다. 이 둘은 SDK 계약이 정해질 때까지의 임시 경로다.
 - AI 호출·크롤링·로그인 같은 무거운 부분은 코어와 분리해 켜고 끌 수 있게 한다. DBpia 쿠키는 기본으로 저장하지 않는다.
-- 앱이 보고서에 주는 GIS 계산값(이격거리·방위·해발·유구 실측)은 읽기 전용이다.
