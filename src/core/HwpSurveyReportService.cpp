@@ -110,26 +110,39 @@ bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QStr
   if (maxStage <= 1) return true;
 
   insertStyledParagraph(doc, QStringLiteral("Ⅱ. 유적의 위치와 환경 — 2. 역사·고고 환경 (<표 1>)"), 1300, true, 1);
-  QVector<QStringList> siteRows = {{QStringLiteral("연번"), QStringLiteral("유적명"), QStringLiteral("최단거리·방위(G)"),
-                                    QStringLiteral("GIS 보고서명(공식 서지)"), QStringLiteral("시대(R)"),
-                                    QStringLiteral("유구·층위(R)"), QStringLiteral("원문 대조")}};
-  for (int i = 0; i < s.siteEntries.size(); ++i) {
-    const auto& e = s.siteEntries[i];
-    const QString bib = Detail::bibliographyLine(e);
-    siteRows.push_back({QString::number(i + 1), e.siteName, QStringLiteral("%1 %2m").arg(e.direction).arg(e.distanceMeters),
-                        bib.isEmpty() ? QStringLiteral("서지 없음") : bib, e.eraSummary, e.featureSummary,
-                        Detail::reportSourceLabel(e)});
+  insertStyledParagraph(doc, Detail::siteStatusSummary(s), 950, false, 0);
+  int cVerified = 0, cReference = 0, cScan = 0, cRagMissing = 0, cGisMissing = 0, cPending = 0;
+  for (const auto& e : s.siteEntries) {
+    if (e.reportStatus == QStringLiteral("✓")) ++cVerified;
+    else if (e.reportStatus == QStringLiteral("△")) ++cReference;
+    else if (e.reportStatus == QStringLiteral("◌")) ++cScan;
+    else if (e.reportStatus == QStringLiteral("○")) {
+      if (e.hasLocalPdf) ++cPending;
+      else if (!e.bibliography.trimmed().isEmpty()) ++cRagMissing;
+      else ++cGisMissing;
+    }
   }
-  if (siteRows.size() == 1)
-    siteRows.push_back({QStringLiteral("-"), QStringLiteral("반경 내 주변유적 없음"), QStringLiteral("-"),
-                        QStringLiteral("-"), QStringLiteral("-"), QStringLiteral("-"), QStringLiteral("-")});
-  appendTableToModel(doc, siteRows);
+  QVector<QStringList> statusRows = {
+      {QStringLiteral("상태"), QStringLiteral("뜻"), QStringLiteral("행 수")},
+      {QStringLiteral("✓"), QStringLiteral("GIS 서지와 같은 보고서 확인"), QString::number(cVerified)},
+      {QStringLiteral("△"), QStringLiteral("다른 보고서/같은 동·리 참고(연장 단정 유보)"), QString::number(cReference)},
+      {QStringLiteral("◌"), QStringLiteral("스캔본(수동 대조 필요)"), QString::number(cScan)},
+      {QStringLiteral("○"), QStringLiteral("로컬 RAG 미수록(서지는 있음)"), QString::number(cRagMissing)},
+      {QStringLiteral("○"), QStringLiteral("GIS 서지 없음"), QString::number(cGisMissing)},
+  };
+  if (cPending > 0)
+    statusRows.push_back({QStringLiteral("○"), QStringLiteral("로컬 PDF 색인 전"), QString::number(cPending)});
+  appendTableToModel(doc, statusRows);
+  insertStyledParagraph(doc, QStringLiteral("가까운 주변유적 20건 (<표 1-1>)"), 1100, true, 1);
+  appendTableToModel(doc, Detail::buildSiteTableRows(s, 20));
   for (int i = 0; i < s.siteEntries.size() && i < 4; ++i) {
     const auto& e = s.siteEntries[i];
     const QString bib = Detail::bibliographyLine(e);
     const QString meta = e.institution.isEmpty() ? QString() : QStringLiteral(" / %1").arg(e.institution);
     QStringList facts;
     if (!e.heritageCode.isEmpty()) facts << QStringLiteral("유산코드 %1").arg(e.heritageCode);
+    else if (!e.featureKey.isEmpty()) facts << QStringLiteral("피처 %1").arg(e.featureKey);
+    if (!e.projectName.isEmpty()) facts << QStringLiteral("사업명 %1").arg(e.projectName);
     if (!e.eraField.isEmpty()) facts << QStringLiteral("시대 %1").arg(e.eraField);
     if (!e.heritagePresence.isEmpty()) facts << QStringLiteral("유적유무 %1").arg(e.heritagePresence);
     if (!e.permitNumber.isEmpty()) facts << QStringLiteral("허가번호 %1").arg(e.permitNumber);
@@ -153,6 +166,11 @@ bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QStr
   insertStyledParagraph(doc, s.ragCitationSlotText, 1000, false, 0);
   bindField(doc, u"고찰본문", u"DISCUSSION_BODY", s.discussionDraft);
   bindField(doc, u"RAG인용슬롯", u"RAG_CITATION_SLOT", s.ragCitationSlotText);
+  if (maxStage > 3) {
+    insertStyledParagraph(doc, QStringLiteral("부록 <표 1-2> 반경 %1m 주변유적 전체 목록").arg(qRound(s.radiusMeters)), 1200, true, 1);
+    insertStyledParagraph(doc, QStringLiteral("※ 전체 %1행. 같은 이름의 도형도 합치지 않았고, 유산코드가 없으면 피처ID로 구분했습니다. ○는 보고서 부재가 아니라 이 PC의 로컬 RAG·PDF에 원문이 없다는 뜻입니다.").arg(s.siteEntries.size()), 900, false, 0);
+    appendTableToModel(doc, Detail::buildSiteTableRows(s, 0));
+  }
   return true;
 }
 

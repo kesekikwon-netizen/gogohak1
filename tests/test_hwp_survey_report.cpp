@@ -1,4 +1,5 @@
 #include "core/HwpAcademicVisuals.h"
+#include "core/HwpSurveyEvidence.h"
 #include "core/HwpSurveyReportService.h"
 #include "core/LocalReportRag.h"
 
@@ -83,11 +84,10 @@ class TestHwpSurveyReport : public QObject {
     QVERIFY(tplSession.renderPreviewHtml().contains(QStringLiteral("부여 관북리 유적 정밀발굴조사 (수정본)")));
 
     QString reply;
-    QVERIFY(tplSession.applyUserRequest(
-        QStringLiteral("고찰에 백제 사비기 왕궁지와의 공간적 위계 관계를 추가해줘"), updated, &reply));
+    QVERIFY(tplSession.applyUserRequest(QStringLiteral("고찰에 백제 사비기 왕궁지와의 공간적 위계 관계를 추가해줘"),
+                                        updated, &reply));
     QVERIFY(tplSession.renderPreviewHtml().contains(QStringLiteral("백제 사비기 왕궁지")));
-    QVERIFY(tplSession.applyUserRequest(
-        QStringLiteral("'왕궁지'를 '핵심 유구군'으로 바꿔줘"), updated, &reply));
+    QVERIFY(tplSession.applyUserRequest(QStringLiteral("'왕궁지'를 '핵심 유구군'으로 바꿔줘"), updated, &reply));
     QVERIFY(tplSession.renderPreviewHtml().contains(QStringLiteral("핵심 유구군")));
   }
 
@@ -174,6 +174,36 @@ class TestHwpSurveyReport : public QObject {
     QVERIFY(missed.bibliography.contains(QStringLiteral("2002")));
   }
 
+  void siteTableKeepsCodesPermitsAndDistinguishesMissing() {
+    HwpSurveyReportService::SurveySnapshot snap;
+    snap.radiusMeters = 500.0;
+    HwpSurveyReportService::SiteEvidenceRow a;
+    a.heritageCode = QStringLiteral("EX1");
+    a.reportStatus = QStringLiteral("✓");
+    HwpSurveyReportService::SiteEvidenceRow b;
+    b.featureKey = QStringLiteral("fid-42");
+    b.reportStatus = QStringLiteral("○");
+    b.bibliography = QStringLiteral("기관, 2023, 보고서B");
+    HwpSurveyReportService::SiteEvidenceRow c;
+    c.reportStatus = QStringLiteral("○");
+    HwpSurveyReportService::SiteEvidenceRow d;
+    d.reportStatus = QStringLiteral("△");
+    snap.siteEntries = {a, b, c, d};
+    const auto rows = HwpSurveyReportService::Detail::buildSiteTableRows(snap);
+    QCOMPARE(rows.size(), 5);
+    QVERIFY(rows[0].contains(QStringLiteral("유산코드")));
+    QVERIFY(rows[0].contains(QStringLiteral("허가번호")));
+    QVERIFY(rows[0].contains(QStringLiteral("사업명")));
+    QCOMPARE(rows[1][2], QStringLiteral("EX1"));
+    QCOMPARE(rows[1][3], QStringLiteral("-"));
+    QVERIFY(rows[2][2].contains(QStringLiteral("fid-42")));
+    QCOMPARE(HwpSurveyReportService::Detail::buildSiteTableRows(snap, 2).size(), 3);
+    const QString summary = HwpSurveyReportService::Detail::siteStatusSummary(snap);
+    QVERIFY(summary.contains(QStringLiteral("로컬 RAG 미수록")));
+    QVERIFY(summary.contains(QStringLiteral("GIS 서지 없음")));
+    QVERIFY(summary.contains(QStringLiteral("△ 참고")));
+  }
+
   void gyeongjuRagEvidenceAndStratigraphyVisuals() {
     if (!std::filesystem::exists(strata::core::LocalReportRag::ragDbPath()))
       QSKIP("Local RAG DB not mounted on this machine");
@@ -207,7 +237,8 @@ class TestHwpSurveyReport : public QObject {
     HwpSurveyReportService::ReportDocumentSession::populateRagEvidence(&snap, true);
     QVERIFY2(snap.regionTotalReports >= 800, qPrintable(QString::number(snap.regionTotalReports)));
     QCOMPARE(snap.siteEntries.size(), 2);
-    QCOMPARE(snap.siteEntries[0].reportStatus, QStringLiteral("✓"));
+    QCOMPARE(snap.siteEntries[0].reportStatus, QStringLiteral("△"));
+    QVERIFY(!snap.siteEntries[0].sameReport);
     QVERIFY(snap.siteEntries[0].pageNo > 0);
     QVERIFY(snap.siteEntries[0].relationToSurvey.contains(QStringLiteral("142m")));
     QCOMPARE(snap.siteEntries[1].reportStatus, QStringLiteral("◌"));
@@ -236,13 +267,13 @@ class TestHwpSurveyReport : public QObject {
     QVERIFY(jeonnamHtml.contains(QStringLiteral("전남")));
     QVERIFY(jeonnamHtml.contains(QStringLiteral("주거지")));
 
-    const QString paleoHtml = HwpAcademicVisuals::renderFeatureComparisonHtml(
-        snap, QStringLiteral("전국의 후기구석기의 분포"));
+    const QString paleoHtml =
+        HwpAcademicVisuals::renderFeatureComparisonHtml(snap, QStringLiteral("전국의 후기구석기의 분포"));
     QVERIFY(paleoHtml.contains(QStringLiteral("전국")));
     QVERIFY(paleoHtml.contains(QStringLiteral("구석기")));
 
-    const QString buildingHtml = HwpAcademicVisuals::renderFeatureComparisonHtml(
-        snap, QStringLiteral("지역별 시대별 건물지의 크기 변화"));
+    const QString buildingHtml =
+        HwpAcademicVisuals::renderFeatureComparisonHtml(snap, QStringLiteral("지역별 시대별 건물지의 크기 변화"));
     QVERIFY(buildingHtml.contains(QStringLiteral("전국")));
     QVERIFY(buildingHtml.contains(QStringLiteral("건물지")));
 

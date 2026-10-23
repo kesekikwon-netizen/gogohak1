@@ -56,6 +56,8 @@ struct SiteRagEvidence {
   bool indexed = false;            // _rag_index.db documents 에 존재
   int report_year = 0;
   std::string institution;
+  bool same_report = false;        // GIS 서지와 같은 보고서
+  bool locality_reference = false; // 같은 동·리 참고(다른 보고서)
 };
 
 class LocalReportRag {

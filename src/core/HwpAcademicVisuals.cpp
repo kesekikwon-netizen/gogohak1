@@ -112,9 +112,12 @@ QString renderVisualsAndDbpiaSectionHtml(const HwpSurveyReportService::SurveySna
                                    QStringLiteral("원문 미확보(확인 필요)"), QStringLiteral("원문 미확보"), QStringLiteral("○ 없음"), false);
     ++colCount;
   }
-  const QString expStrata = !snap.siteEntries.isEmpty() && snap.siteEntries.front().reportStatus == QStringLiteral("✓")
-      ? QStringLiteral("최단거리 유적(%1m) 토층 기준 동일 지형면 연장 예상").arg(snap.siteEntries.front().distanceMeters)
-      : QStringLiteral("시굴 트렌치 굴착을 통한 기준 토층 확인 필요");
+  const QString expStrata =
+      !snap.siteEntries.isEmpty() && snap.siteEntries.front().reportStatus == QStringLiteral("✓")
+          ? QStringLiteral("최단거리 유적(%1m) 토층 기준 동일 지형면 연장 예상").arg(snap.siteEntries.front().distanceMeters)
+          : (!snap.siteEntries.isEmpty() && snap.siteEntries.front().reportStatus == QStringLiteral("△")
+                 ? QStringLiteral("참고 보고서(%1m) 기준으로 동일 지형면 연장 여부 확인 필요").arg(snap.siteEntries.front().distanceMeters)
+                 : QStringLiteral("시굴 트렌치 굴착을 통한 기준 토층 확인 필요"));
   const QString expFeat = !snap.siteEntries.isEmpty()
       ? QStringLiteral("인접 %1(%2 %3m) 연관 유구 분포 가능성 검토").arg(snap.siteEntries.front().siteName.left(10), snap.siteEntries.front().direction).arg(snap.siteEntries.front().distanceMeters)
       : QStringLiteral("조사구역(%1㎡) 내 유구 분포 확인 예정").arg(qRound(snap.totalAreaSqm));
@@ -129,7 +132,9 @@ QString renderVisualsAndDbpiaSectionHtml(const HwpSurveyReportService::SurveySna
   for (int i = 0; i < snap.siteEntries.size() && i < 10; ++i) {
     const auto& e = snap.siteEntries[i];
     const int barPct = qBound(4, e.distanceMeters * 100 / maxDist, 100);
-    const QString barColor = e.reportStatus == QStringLiteral("✓") ? QStringLiteral("#B5573A") : (e.reportStatus == QStringLiteral("◌") ? QStringLiteral("#8C7A6B") : QStringLiteral("#B8B2A6"));
+    const QString barColor = e.reportStatus == QStringLiteral("✓") ? QStringLiteral("#B5573A")
+                             : (e.reportStatus == QStringLiteral("△") ? QStringLiteral("#C08A2E")
+                             : (e.reportStatus == QStringLiteral("◌") ? QStringLiteral("#8C7A6B") : QStringLiteral("#B8B2A6")));
     html += QStringLiteral("<tr><td width='165' style='padding:3px 5px;'><b>%1. %2</b></td><td width='65' align='center'>%3 %4m</td>"
                            "<td style='padding:3px 6px;background:#F3EFE8;'><table width='%5%' cellspacing='0' cellpadding='0'><tr><td style='background:%6;height:12px;'>&nbsp;</td></tr></table></td>"
                            "<td width='140' align='right' style='padding:3px 5px;'>%7 %8</td></tr>")
@@ -154,25 +159,29 @@ QString renderVisualsAndDbpiaSectionHtml(const HwpSurveyReportService::SurveySna
 }
 
 QString renderVerificationReportHtml(const HwpSurveyReportService::SurveySnapshot& snap, const DbpiaSummary& dbpia) {
-  int cVerified = 0, cScan = 0, cMissing = 0;
+  int cVerified = 0, cReference = 0, cScan = 0, cMissing = 0;
   for (const auto& e : snap.siteEntries) {
     if (e.reportStatus == QStringLiteral("✓")) ++cVerified;
+    else if (e.reportStatus == QStringLiteral("△")) ++cReference;
     else if (e.reportStatus == QStringLiteral("◌")) ++cScan;
     else ++cMissing;
   }
   QString html = QStringLiteral(
       "<html><body style='background:#FAF8F5;margin:0;padding:18px;font-family:\"Pretendard\",\"Noto Sans CJK KR\",sans-serif;color:#1F1E1B;'>"
       "<div style='padding:10px 14px;background:#E3DACC;border:1px solid #1F1E1B;margin-bottom:14px;font-size:9.5pt;'>"
-      "<b>[검수 보고 · 사실근거 대조표]</b> &nbsp; GIS 측정(G): <b>%1건</b> &nbsp;|&nbsp; 원문 확인(✓): <b>%2건</b> &nbsp;|&nbsp; 스캔본(◌): <b>%3건</b> &nbsp;|&nbsp; 미기재(○): <b>%4건</b> &nbsp;|&nbsp; 문헌(L): <b>%5편</b></div>"
+      "<b>[검수 보고 · 사실근거 대조표]</b> &nbsp; GIS 측정(G): <b>%1건</b> &nbsp;|&nbsp; 원문 확인(✓): <b>%2건</b> &nbsp;|&nbsp; 참고(△): <b>%3건</b> &nbsp;|&nbsp; 스캔본(◌): <b>%4건</b> &nbsp;|&nbsp; 미수록(○): <b>%5건</b> &nbsp;|&nbsp; 문헌(L): <b>%6편</b></div>"
       "<table border='1' cellspacing='0' cellpadding='6' style='border-collapse:collapse;width:100%;font-size:8.8pt;border-top:2px solid #1F1E1B;border-bottom:2px solid #1F1E1B;border-color:#A8A196;'>"
       "<tr style='background:#E3DACC;font-weight:bold;text-align:center;'><td width='70'>장·절</td><td>본문 서술 및 수치 항목</td><td width='55'>구분</td><td width='210'>검증 출처</td><td width='65'>판정</td></tr>")
-      .arg(snap.siteEntries.size() + 1).arg(cVerified).arg(cScan).arg(cMissing).arg(dbpia.collectedPapers.size());
+      .arg(snap.siteEntries.size() + 1).arg(cVerified).arg(cReference).arg(cScan).arg(cMissing).arg(dbpia.collectedPapers.size());
   html += QStringLiteral("<tr><td align='center'>Ⅰ. 머리말</td><td>조사면적 %1㎡ (%2개 구역, 좌표계 %3)</td><td align='center'>G</td><td>QGIS 도메인 레이어(survey_area) 실측</td><td align='center'><b>✓ 확인</b></td></tr>")
               .arg(qRound(snap.totalAreaSqm)).arg(snap.surveyPolygonCount).arg(snap.surveyCrs.toHtmlEscaped());
   for (int i = 0; i < snap.siteEntries.size(); ++i) {
     const auto& e = snap.siteEntries[i];
     const QString cite = HwpSurveyReportService::Detail::reportSourceLabel(e);
-    const QString badge = e.reportStatus == QStringLiteral("✓") ? QStringLiteral("<b>✓ 확인</b>") : (e.reportStatus == QStringLiteral("◌") ? QStringLiteral("◌ 스캔본") : QStringLiteral("○ 미기재"));
+    const QString badge = e.reportStatus == QStringLiteral("✓") ? QStringLiteral("<b>✓ 확인</b>")
+                            : (e.reportStatus == QStringLiteral("△") ? QStringLiteral("△ 참고")
+                            : (e.reportStatus == QStringLiteral("◌") ? QStringLiteral("◌ 스캔본")
+                                                                     : QStringLiteral("○ 미수록")));
     html += QStringLiteral("<tr><td align='center'>Ⅱ-%1</td><td><b>%2</b> (경계 기준 %3 %4m) · %5</td><td align='center'>G+R</td><td>%6</td><td align='center'>%7</td></tr>")
                 .arg(i + 1).arg(e.siteName.toHtmlEscaped(), e.direction.toHtmlEscaped()).arg(e.distanceMeters).arg(e.featureSummary.left(65).toHtmlEscaped(), cite.toHtmlEscaped(), badge);
   }
@@ -246,10 +255,13 @@ QString renderFeatureComparisonHtml(const HwpSurveyReportService::SurveySnapshot
 void appendDbpiaAndVisualSummaryToDoc(const HwpSurveyReportService::SurveySnapshot& snap, const DbpiaSummary& dbpia,
                                       HwpSurveyReportService::ReportDocumentSession* session) {
   if (!session) return;
-  int cVerified = 0;
-  for (const auto& e : snap.siteEntries) if (e.reportStatus == QStringLiteral("✓")) ++cVerified;
-  const QString summary = QStringLiteral("\n[동국문화재연구원 양식 · 사실근거 종합]\n• <그림 1~2> 주변유적(%1개소, 원문확인 %2개소) 층위 대비도 및 최단거리 분포\n• 학술문헌(DBpia): %3편\n")
-                              .arg(snap.siteEntries.size()).arg(cVerified).arg(dbpia.collectedPapers.size());
+  int cVerified = 0, cReference = 0;
+  for (const auto& e : snap.siteEntries) {
+    if (e.reportStatus == QStringLiteral("✓")) ++cVerified;
+    else if (e.reportStatus == QStringLiteral("△")) ++cReference;
+  }
+  const QString summary = QStringLiteral("\n[동국문화재연구원 양식 · 사실근거 종합]\n• <그림 1~2> 주변유적(%1개소, 동일 보고서 %2개소 · 참고 %3개소) 층위 대비도 및 최단거리 분포\n• 학술문헌(DBpia): %4편\n")
+                              .arg(snap.siteEntries.size()).arg(cVerified).arg(cReference).arg(dbpia.collectedPapers.size());
   session->setFieldValue(QStringLiteral("DISCUSSION_BODY"), snap.discussionDraft + summary + dbpia.synthesizedDiscussion);
 }
 }  // namespace HwpAcademicVisuals

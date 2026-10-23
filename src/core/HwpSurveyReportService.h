@@ -27,7 +27,9 @@ struct SiteEvidenceRow {
   QString eraStatus = QStringLiteral("○");
   QString featureStatus = QStringLiteral("○");
   QString strataStatus = QStringLiteral("○");
-  QString reportStatus = QStringLiteral("○");  // "✓" | "◌" | "○"
+  QString reportStatus = QStringLiteral("○");  // "✓" | "△" | "◌" | "○"
+  bool sameReport = false;   // GIS 서지와 실제 대조한 PDF가 같은 보고서
+  bool localityReference = false;  // 같은 동·리 참고(다른 보고서)
   QString reportName;        // 실제 대조한 로컬 PDF 파일명
   int pageNo = 0;
   int strataPageNo = 0;
@@ -37,6 +39,7 @@ struct SiteEvidenceRow {
   QString relationToSurvey;  // ⑤ 조사구역과의 연관성
   // GIS 원자료의 공식 서지. 로컬 원문을 못 찾아도 이 값은 표에 남긴다.
   QString heritageCode;
+  QString featureKey;        // 유산코드가 없을 때 도형을 구분하는 피처ID 키
   QString bibliography;      // GIS 보고서명(기관, 연도, 제목)
   QString projectName;       // GIS 사업명
   QString siteAddress;       // GIS 소재지

@@ -223,6 +223,8 @@ Result collect(QgsProject* project, QgsVectorLayer* sourceLayer, double maxRadiu
             datasetName, layer->name(), label.isEmpty() ? HeritageStyle::unnamedLabel() : label, {}, {}, 0, -1.0, {}};
         fillMetadata(&entry.item, f, fields);
       }
+      // 표에서 같은 이름의 도형을 구분할 수 있도록 코드/피처ID 키를 남긴다.
+      entry.item.featureKey = key;
       entry.parts.append(g);
     }
     for (auto git = grouped.cbegin(); git != grouped.cend(); ++git) {

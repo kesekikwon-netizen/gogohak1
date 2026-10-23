@@ -261,6 +261,7 @@ add_library(ka_core STATIC
   src/core/GeminiCommandRouter.cpp
   src/core/HwpSurveyReportService.cpp
   src/core/HwpSurveyEvidence.cpp
+  src/core/HwpSurveyTable.cpp
   src/core/HwpAcademicVisuals.cpp
   src/core/LocalReportRag.cpp
   src/core/LocalReportText.cpp

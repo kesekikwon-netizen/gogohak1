@@ -29,10 +29,15 @@ void KaHwpReportStudio::populateEvidenceTable() {
   for (int i = 0; i < m_cachedSnap.siteEntries.size(); ++i) {
     const auto& e = m_cachedSnap.siteEntries[i];
     const QString rptBadge = e.reportStatus == QStringLiteral("✓")
-                                 ? QStringLiteral("✓ p.%1").arg(e.pageNo)
-                                 : (e.reportStatus == QStringLiteral("◌")
-                                        ? QStringLiteral("◌ 스캔")
-                                        : (e.hasLocalPdf ? QStringLiteral("○ 색인 전") : QStringLiteral("○ 없음")));
+                                 ? QStringLiteral("✓ p.%1").arg(e.pageNo > 0 ? e.pageNo : 1)
+                                 : (e.reportStatus == QStringLiteral("△")
+                                        ? QStringLiteral("△ 참고")
+                                        : (e.reportStatus == QStringLiteral("◌")
+                                               ? QStringLiteral("◌ 스캔")
+                                               : (e.hasLocalPdf ? QStringLiteral("○ 색인 전")
+                                                                : (e.bibliography.trimmed().isEmpty()
+                                                                       ? QStringLiteral("○ 서지 없음")
+                                                                       : QStringLiteral("○ RAG 미수록")))));
     const QStringList cols = {QString::number(i + 1),
                               e.siteName,
                               QStringLiteral("%1m").arg(e.distanceMeters),

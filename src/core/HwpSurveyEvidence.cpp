@@ -9,15 +9,30 @@
 namespace HwpSurveyReportService {
 namespace {
 
+QString pageSuffix(const SiteEvidenceRow& row) {
+  return row.pageNo > 0 ? QStringLiteral(" p.%1").arg(row.pageNo) : QString();
+}
+
 QString localReportLabel(const SiteEvidenceRow& row) {
   const QString name = row.reportName.isEmpty() ? QStringLiteral("로컬 원문") : row.reportName;
-  if (row.reportStatus == QStringLiteral("✓"))
-    return QStringLiteral("✓ 『%1』 p.%2").arg(name).arg(row.pageNo > 0 ? row.pageNo : 1);
-  if (row.reportStatus == QStringLiteral("◌"))
-    return row.reportName.isEmpty() ? QStringLiteral("◌ 스캔본")
-                                    : QStringLiteral("◌ 스캔본 『%1』").arg(row.reportName);
+  if (row.reportStatus == QStringLiteral("✓")) {
+    if (row.datasetName == QStringLiteral("지역 보고서 RAG"))
+      return QStringLiteral("✓ 지역 RAG 원문 『%1』%2").arg(name, pageSuffix(row));
+    return QStringLiteral("✓ 동일 보고서 『%1』%2").arg(name, pageSuffix(row));
+  }
+  if (row.reportStatus == QStringLiteral("△")) {
+    if (row.bibliography.trimmed().isEmpty())
+      return QStringLiteral("△ GIS 서지 없음·로컬 참고 『%1』%2").arg(name, pageSuffix(row));
+    const QString kind = row.localityReference ? QStringLiteral("같은 동·리 참고") : QStringLiteral("다른 보고서 참고");
+    return QStringLiteral("△ %1 『%2』%3").arg(kind, name, pageSuffix(row));
+  }
+  if (row.reportStatus == QStringLiteral("◌")) {
+    const QString kind = row.sameReport ? QStringLiteral("스캔본(수동 대조)") : QStringLiteral("스캔본(다른 보고서)");
+    return row.reportName.isEmpty() ? QStringLiteral("◌ %1").arg(kind)
+                                    : QStringLiteral("◌ %1 『%2』").arg(kind, row.reportName);
+  }
   if (row.hasLocalPdf) return QStringLiteral("○ 로컬 PDF 색인 전");
-  return QStringLiteral("○ 원문 미확보");
+  return QStringLiteral("○ 로컬 RAG 미수록");
 }
 
 }  // namespace
@@ -58,12 +73,14 @@ QString bibliographyLine(const SiteEvidenceRow& row) {
 QString reportSourceLabel(const SiteEvidenceRow& row) {
   const QString bib = bibliographyLine(row);
   const QString local = localReportLabel(row);
-  if (row.reportStatus == QStringLiteral("✓") && !row.reportName.isEmpty())
+  if (row.reportStatus == QStringLiteral("✓") || row.reportStatus == QStringLiteral("△") ||
+      row.reportStatus == QStringLiteral("◌"))
     return bib.isEmpty() ? local : QStringLiteral("%1 · GIS %2").arg(local, bib);
-  if (row.reportStatus == QStringLiteral("◌"))
-    return bib.isEmpty() ? local : QStringLiteral("%1 · GIS %2").arg(local, bib);
-  if (bib.isEmpty()) return QStringLiteral("○ 서지 없음");
-  return QStringLiteral("○ 원문 미확보 · GIS %1").arg(bib);
+  if (row.hasLocalPdf)
+    return bib.isEmpty() ? QStringLiteral("○ 로컬 PDF 색인 전")
+                         : QStringLiteral("○ 로컬 PDF 색인 전 · GIS %1").arg(bib);
+  if (bib.isEmpty()) return QStringLiteral("○ GIS 서지 없음");
+  return QStringLiteral("○ 로컬 RAG 미수록 · GIS %1").arg(bib);
 }
 
 }  // namespace Detail
@@ -84,6 +101,7 @@ void ReportDocumentSession::populateRagEvidence(SurveySnapshot* snap, bool query
     row.distanceMeters = s.distanceMeters;
     row.direction = s.direction.isEmpty() ? QStringLiteral("인접") : s.direction;
     row.heritageCode = s.heritageCode;
+    row.featureKey = s.featureKey;
     row.bibliography = s.reportName;
     row.projectName = s.projectName;
     row.siteAddress = s.siteAddress;
@@ -110,6 +128,8 @@ void ReportDocumentSession::populateRagEvidence(SurveySnapshot* snap, bool query
                                                                            snap->regionName.toStdString());
         row.hasLocalPdf = ev.has_local_pdf;
         row.indexed = ev.indexed;
+        row.sameReport = ev.same_report;
+        row.localityReference = ev.locality_reference;
         row.reportName = QString::fromStdString(ev.report_name);
         row.reportStatus = QString::fromStdString(ev.status);
         row.eraStatus = QString::fromStdString(ev.era_status);
@@ -127,12 +147,27 @@ void ReportDocumentSession::populateRagEvidence(SurveySnapshot* snap, bool query
     if (row.reportStatus == QStringLiteral("○")) {
       row.eraStatus = row.featureStatus = row.strataStatus = QStringLiteral("○");
       row.eraSummary = QStringLiteral("근거 없음·확인 필요");
-      row.featureSummary = QStringLiteral("원문 미확보");
-      row.strataSummary = QStringLiteral("토층 미확보");
+      if (row.hasLocalPdf) {
+        row.featureSummary = QStringLiteral("로컬 PDF 색인 전");
+        row.strataSummary = QStringLiteral("로컬 PDF 색인 전");
+      } else if (!row.bibliography.trimmed().isEmpty()) {
+        row.featureSummary = QStringLiteral("로컬 RAG 미수록");
+        row.strataSummary = QStringLiteral("로컬 RAG 미수록");
+      } else {
+        row.featureSummary = QStringLiteral("GIS 서지 없음");
+        row.strataSummary = QStringLiteral("GIS 서지 없음");
+      }
+    } else if (row.reportStatus == QStringLiteral("△")) {
+      row.eraStatus = row.featureStatus = row.strataStatus = QStringLiteral("△");
+      const QString kind = row.localityReference
+                               ? QStringLiteral("같은 동·리 참고")
+                               : (row.bibliography.trimmed().isEmpty() ? QStringLiteral("GIS 서지 없음·로컬 참고")
+                                                                       : QStringLiteral("다른 보고서 참고"));
+      row.eraSummary = row.featureSummary = row.strataSummary = kind;
     } else if (row.reportStatus == QStringLiteral("◌")) {
-      row.eraSummary = QStringLiteral("스캔본·수동 대조 필요");
-      row.featureSummary = QStringLiteral("스캔본·수동 대조 필요");
-      row.strataSummary = QStringLiteral("스캔본·수동 대조 필요");
+      const QString kind =
+          row.sameReport ? QStringLiteral("스캔본·수동 대조 필요") : QStringLiteral("스캔본(다른 보고서)·참고");
+      row.eraSummary = row.featureSummary = row.strataSummary = kind;
     } else {
       if (row.eraSummary.isEmpty()) row.eraSummary = QStringLiteral("근거 없음·확인 필요");
       if (row.featureSummary.isEmpty()) row.featureSummary = QStringLiteral("원문 미기재·확인 필요");
@@ -143,19 +178,30 @@ void ReportDocumentSession::populateRagEvidence(SurveySnapshot* snap, bool query
     const QString bib = Detail::bibliographyLine(row);
     if (row.reportStatus == QStringLiteral("✓"))
       row.relationToSurvey =
-          relationBase + QStringLiteral(" 『%1』(p.%2) 확인 유구·문화층 동일 지형면 연장 가능성 검토 대상.")
+          relationBase + QStringLiteral(" 동일 보고서 『%1』(p.%2) 확인 유구·문화층 동일 지형면 연장 가능성 검토 대상.")
                              .arg(row.reportName)
-                             .arg(row.pageNo);
-    else if (row.reportStatus == QStringLiteral("◌"))
+                             .arg(row.pageNo > 0 ? row.pageNo : 1);
+    else if (row.reportStatus == QStringLiteral("△")) {
+      const QString kind = row.localityReference
+                               ? QStringLiteral("같은 동·리 참고")
+                               : (row.bibliography.trimmed().isEmpty() ? QStringLiteral("GIS 서지 없음·로컬 참고")
+                                                                       : QStringLiteral("다른 보고서 참고"));
       row.relationToSurvey =
-          relationBase + QStringLiteral(" 스캔본(『%1』) 도면·토층 수동 대조 필요%2")
-                             .arg(row.reportName, bib.isEmpty() ? QString() : QStringLiteral(" (GIS %1)").arg(bib));
+          relationBase + QStringLiteral(" %1 『%2』%3 — 참고만 하고 유구 연장 단정은 유보(확인 필요).%4")
+                             .arg(kind, row.reportName.isEmpty() ? QStringLiteral("로컬 문헌") : row.reportName,
+                                  pageSuffix(row), bib.isEmpty() ? QString() : QStringLiteral(" (GIS %1)").arg(bib));
+    } else if (row.reportStatus == QStringLiteral("◌"))
+      row.relationToSurvey =
+          relationBase + QStringLiteral(" %1(『%2』) 도면·토층 수동 대조 필요%3")
+                             .arg(row.sameReport ? QStringLiteral("스캔본") : QStringLiteral("다른 보고서 스캔본"),
+                                  row.reportName, bib.isEmpty() ? QString() : QStringLiteral(" (GIS %1)").arg(bib));
     else if (!bib.isEmpty())
       row.relationToSurvey =
           relationBase +
-          QStringLiteral(" 로컬 원문 미확보. GIS 공식 서지 %1를 기준으로 유구 연장 여부 검토(확인 필요).").arg(bib);
+          QStringLiteral(" 로컬 RAG 미수록. GIS 공식 서지 %1를 기준으로 유구 연장 여부 검토(확인 필요).").arg(bib);
     else
-      row.relationToSurvey = relationBase + QStringLiteral(" 로컬·GIS 서지 미확보로 유구 연장 단정 유보(확인 필요).");
+      row.relationToSurvey =
+          relationBase + QStringLiteral(" 로컬 RAG·GIS 서지 미확보로 유구 연장 단정 유보(확인 필요).");
     snap->siteEntries.push_back(std::move(row));
   }
   if (snap->siteEntries.isEmpty() && queryRagDb) {
@@ -169,6 +215,7 @@ void ReportDocumentSession::populateRagEvidence(SurveySnapshot* snap, bool query
           QStringLiteral("[%1] %2").arg(QString::fromStdString(h.sigungu), QFileInfo(rpt).completeBaseName());
       row.direction = QStringLiteral("권역");
       row.eraStatus = row.featureStatus = row.strataStatus = row.reportStatus = QStringLiteral("✓");
+      row.sameReport = true;  // GIS 유적이 아니라 지역 RAG 원문 자체를 인용하는 행
       row.reportName = rpt;
       row.pageNo = row.strataPageNo = h.page_no;
       row.eraSummary = QStringLiteral("원문 수록");

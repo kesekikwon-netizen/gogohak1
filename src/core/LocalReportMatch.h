@@ -39,6 +39,10 @@ struct LocalReportMatchResult {
   int year = 0;
   int total_pages = 0;
   double score = 0.0;
+  // GIS 서지와 실제로 대조한 PDF가 같은 보고서인지 구분한다.
+  // same_report=false 이면 표에서 ✓가 아니라 △(참고)로 표시한다.
+  bool same_report = false;
+  bool locality_reference = false;  // 같은 동·리 보고서를 참고한 경우
 };
 
 class LocalReportMatch {

@@ -27,6 +27,7 @@ struct Item {
   QString heritagePresence; // 유적유무
   QString permitNumber;     // 허가번호
   QString featureName;      // 유적명(발굴의 "A지구" 같은 세부 이름)
+  QString featureKey;       // 유산코드가 없을 때 도형을 구분하는 피처ID 키(code:.../__fid_...)
 };
 
 struct Result {

@@ -60,6 +60,53 @@ void fillDoc(const Catalog& c, std::size_t index, LocalReportMatchResult& out) {
   out.indexed = true, out.scan = d.scan;
   out.rel_path = d.rel_path, out.sigungu = d.sigungu, out.extraction_mode = d.mode, out.total_pages = d.total_pages;
 }
+
+// 유적명·보고서명·소재지의 번지를 모두 후보로 둔다.
+// 372072/372-72, 299-1/199-1처럼 한쪽에 오기가 있어도 다른 쪽 번지로 대조할 수 있게 한다.
+std::vector<std::string> addressKeys(const LocalReportMatchQuery& q) {
+  std::vector<std::string> out;
+  for (const std::string* s : {&q.site_name, &q.report_name, &q.address, &q.project_name}) {
+    const std::string a = LocalReportText::addressKey(*s);
+    if (!a.empty() && std::find(out.begin(), out.end(), a) == out.end()) out.push_back(a);
+  }
+  return out;
+}
+
+// GIS 서지와 실제 대조한 보고서 제목이 같은 문헌인지 판정한다.
+// 유적명·사업명·보고서명을 모두 비교하고, 주소+연도도 보조 키로 쓴다.
+// GIS 보고서명이 비어 있으면 '같은 보고서'라고 단정하지 않는다(✓ 금지).
+bool sameReportText(const LocalReportMatchQuery& q, const std::string& raw_title, const std::string& raw_attach,
+                    int known_year) {
+  if (LocalReportText::titleKey(q.report_name).empty()) return false;
+  const std::string doc_key =
+      !raw_title.empty() ? LocalReportText::titleKey(raw_title) : LocalReportText::titleKey(raw_attach);
+  if (doc_key.empty()) return false;
+  const int qyear = q.year > 0 ? q.year : LocalReportText::parseYear(q.report_name);
+  const int dyear = known_year > 0 ? known_year : LocalReportText::parseYear(raw_title + " " + raw_attach);
+  const bool year_ok = qyear <= 0 || dyear <= 0 || std::abs(qyear - dyear) <= 2;
+
+  const std::string keys[] = {LocalReportText::titleKey(q.site_name), LocalReportText::titleKey(q.project_name),
+                              LocalReportText::titleKey(q.report_name)};
+  for (const std::string& k : keys) {
+    if (k.size() < 4) continue;
+    if (k == doc_key) return year_ok;
+    if (k.size() >= 6 && doc_key.size() >= 6 &&
+        (k.find(doc_key) != std::string::npos || doc_key.find(k) != std::string::npos))
+      return year_ok;
+    if (LocalReportText::dice(k, doc_key) >= 0.78) return year_ok;
+  }
+
+  // 번지가 하나라도 일치하면 같은 유적으로 본다. 단, 같은 동·리 안에서만 인정해
+  // 태종로/동성로처럼 같은 번지의 다른 사업을 오매칭하지 않는다.
+  const std::string doc_addr = LocalReportText::addressKey(raw_title);
+  if (doc_addr.empty()) return false;
+  const std::string qloc = LocalReportText::locality(q.site_name + " " + q.report_name);
+  const std::string dloc = LocalReportText::locality(raw_title);
+  if (qloc.empty() || dloc.empty() || qloc != dloc) return false;
+  for (const std::string& a : addressKeys(q))
+    if (a == doc_addr) return year_ok;
+  return false;
+}
 }  // namespace
 
 int LocalReportMatch::parseYear(std::string_view text_utf8) {
@@ -90,9 +137,7 @@ LocalReportMatchResult LocalReportMatch::find(const LocalReportMatchQuery& q) {
   addKey(LocalReportText::titleKey(q.site_name));
   if (keys.empty()) return out;
   const int year = q.year > 0 ? q.year : LocalReportText::parseYear(q.report_name);
-  const std::string addr = !q.address.empty() ? LocalReportText::addressKey(q.address)
-                                              : (!q.site_name.empty() ? LocalReportText::addressKey(q.site_name)
-                                                                      : LocalReportText::addressKey(q.project_name));
+  const std::vector<std::string> addrs = addressKeys(q);
   const std::string inst = institutionKey(q.institution);
   int qPhase = LocalReportText::phase(q.project_name);
   if (qPhase == 0) qPhase = LocalReportText::phase(q.report_name);
@@ -120,7 +165,9 @@ LocalReportMatchResult LocalReportMatch::find(const LocalReportMatchQuery& q) {
       for (const std::string& rk : {r.title_key, r.attach_key, r.site_key})
         if (k.size() >= 8 && rk.size() >= 8 && (k.find(rk) != std::string::npos || rk.find(k) != std::string::npos))
           tscore = std::max(tscore, 70);
-    const int ascore = (!addr.empty() && addr == r.addr_key) ? 40 : 0;
+    const bool addrMatch =
+        std::any_of(addrs.begin(), addrs.end(), [&](const std::string& a) { return a == r.addr_key; });
+    const int ascore = addrMatch ? 40 : 0;
     const int diff = (year > 0 && r.year > 0) ? std::abs(year - r.year) : 99;
     const int yscore =
         diff == 0 ? 30
@@ -143,7 +190,13 @@ LocalReportMatchResult LocalReportMatch::find(const LocalReportMatchQuery& q) {
   out.pdf_name = best->attach.empty() ? best->title : best->attach;
   out.institution = best->org;
   out.year = best->year;
-  fillDoc(c, pickDoc(c, *best, q), out);
+  const std::size_t doc_index = pickDoc(c, *best, q);
+  fillDoc(c, doc_index, out);
+  // 실제로 대조할 PDF가 GIS 서지와 같은 보고서일 때만 same_report=true.
+  if (doc_index < c.docs.size())
+    out.same_report = sameReportText(q, c.docs[doc_index].report_name, {}, docYear(c.docs[doc_index]));
+  else
+    out.same_report = sameReportText(q, best->title, best->attach, best->year);
   return out;
 }
 
@@ -166,6 +219,8 @@ LocalReportMatchResult LocalReportMatch::localityDocument(std::string_view site_
   out.report_name = out.pdf_name = d.report_name;
   out.rel_path = d.rel_path, out.sigungu = d.sigungu, out.extraction_mode = d.extraction_mode,
   out.total_pages = d.total_pages;
+  out.same_report = false;
+  out.locality_reference = true;
   return out;
 }
 }  // namespace strata::core

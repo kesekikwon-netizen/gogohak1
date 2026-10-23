@@ -159,6 +159,8 @@ SiteRagEvidence LocalReportRag::inspectMatchedReport(const LocalReportMatchResul
   ev.institution = match.institution;
   ev.total_pages = match.total_pages;
   ev.report_name = !match.pdf_name.empty() ? match.pdf_name : match.report_name;
+  ev.same_report = match.same_report;
+  ev.locality_reference = match.locality_reference;
   if (!match.indexed) return ev;  // 로컬 PDF는 찾았지만 색인 전: ○ (미색인)
   if (match.scan) {
     ev.status = ev.era_status = ev.feature_status = ev.strata_status = "◌";
@@ -178,8 +180,17 @@ SiteRagEvidence LocalReportRag::inspectMatchedReport(const LocalReportMatchResul
   if (chunks.empty())
     chunks = runScopedQuery(db, match.rel_path, "\"토층\" OR \"층위\" OR \"유구\" OR \"시대\" OR \"유물\"");
   ::sqlite3_close(db);
-  ev.status = "✓";
   analyzeChunks(chunks, &ev);
+  if (!ev.same_report) {
+    // 다른 보고서/같은 동·리 참고는 페이지 위치만 남기고, 시대·유구·층위는 이 유적의 근거로 쓰지 않는다.
+    ev.status = ev.era_status = ev.feature_status = ev.strata_status = "△";
+    ev.era_summary.clear();
+    ev.feature_summary.clear();
+    ev.strata_summary.clear();
+    ev.strata_page_no = 0;
+    return ev;
+  }
+  ev.status = "✓";
   if (ev.page_no <= 0) ev.page_no = 1;
   return ev;
 }
