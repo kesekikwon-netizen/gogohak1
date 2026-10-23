@@ -75,7 +75,8 @@ class TestUiTerms : public QObject {
     const QString root = QString::fromUtf8(KA_SOURCE_DIR);
     const QStringList banned = {QStringLiteral("RAG"), QStringLiteral("SDK"), QStringLiteral("피처"),
                                 QStringLiteral("누름틀"), QStringLiteral("Antigravity"), QStringLiteral("슬롯"),
-                                QStringLiteral("_SLOT"), QStringLiteral("하네스")};
+                                QStringLiteral("_SLOT"), QStringLiteral("하네스"), QStringLiteral("┏"), QStringLiteral("┓"),
+                                QStringLiteral("┗"), QStringLiteral("┛")};
     const QStringList keepFieldNames = {QStringLiteral("RAG인용슬롯")};
     const QRegularExpression identifierOnly(QStringLiteral("^[A-Za-z0-9_./:?=&%#-]*$"));
     QStringList hits;

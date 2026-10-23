@@ -242,7 +242,7 @@ QString ReportDocumentSession::renderPreviewHtml(const QString& liveStageLabel, 
       "<html><body style='background:#EAE6DF;margin:0;padding:18px;font-family:\"Noto Serif CJK KR\",\"NanumMyeongjo\",serif;'>"
       "<table align='center' width='%1' cellspacing='0' cellpadding='0' style='background:#FAF8F5;border:1px solid #C8C1B4;'>"
       "<tr><td style='padding:20px 38px 8px 38px;color:#6E6A63;font-size:8.5pt;border-bottom:1px solid #DDD6C9;'>"
-      "<span>┏ 한글(HWPX/HWP) A4 (210×297mm)</span><span style='float:right;'>┓</span></td></tr>"
+      "<span>한글(HWPX/HWP) A4 (210×297mm)</span></td></tr>"
       "<tr><td style='padding:20px 40px;color:#1F1E1B;line-height:1.72;'>").arg(pageW);
   if (!liveStageLabel.isEmpty())
     html += QStringLiteral("<div style='background:#F3ECE2;border:1px solid #B5573A;color:#1F1E1B;padding:6px 10px;margin-bottom:10px;font-weight:bold;font-size:9pt;'>[진행 단계] %1</div>").arg(liveStageLabel.toHtmlEscaped());
@@ -274,6 +274,6 @@ QString ReportDocumentSession::renderPreviewHtml(const QString& liveStageLabel, 
     for (const auto& f : model.fields) html += QStringLiteral("<b>⟪%1⟫</b> %2 &nbsp; ").arg(QString::fromStdString(f.name_utf8).toHtmlEscaped(), QString::fromStdString(f.text_utf8).toHtmlEscaped());
     html += QStringLiteral("</div>");
   }
-  return html + QStringLiteral("</td></tr><tr><td align='center' style='padding:10px 38px 18px 38px;color:#6E6A63;font-size:8.4pt;border-top:1px solid #DDD6C9;'>┗ - 1 - ┛</td></tr></table></body></html>");
+  return html + QStringLiteral("</td></tr><tr><td align='center' style='padding:10px 38px 18px 38px;color:#6E6A63;font-size:8.4pt;border-top:1px solid #DDD6C9;'>- 1 -</td></tr></table></body></html>");
 }
 }  // namespace HwpSurveyReportService

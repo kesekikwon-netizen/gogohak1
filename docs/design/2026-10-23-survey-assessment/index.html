@@ -266,7 +266,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
   "source": { "title": "…발굴조사보고서", "year": 2019, "institution": "…" },
   "page": 78, "text": "원문 그대로",
   "status": "same_report" }   // same_report | reference | scan | missing</pre>
-  <p>상태 네 가지: <span class="tag t-ok">동일 보고서 확인</span> <span class="tag t-sdk">참고</span> <span class="tag t-todo">스캔본(직접 대조)</span> <span class="tag t-gap">미수록</span>. 기호(✓ △ ◌ ○)는 화면 범례용이고 제출 문서에는 말로 씁니다.</p>
+  <p>상태 네 가지: <span class="tag t-ok">동일 보고서 확인</span> <span class="tag t-sdk">참고</span> <span class="tag t-todo">스캔본(직접 대조)</span> <span class="tag t-gap">미수록</span>. 기호(✓ △ ◌ ○)는 말과 함께, 범례를 두고 씁니다. 기호만 단독으로 나오지 않게 합니다.</p>
   <h3><span class="tag t-sdk">SDK</span> → <span class="tag t-app">앱</span> 평가 결과</h3>
 <pre>{ "sections": [ { "key": "link", "title": "연계성",
       "claims": [ { "text": "…", "evidenceIds": ["E12", "E31"], "type": "fact" } ] } ],
@@ -297,8 +297,8 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
   <div class="cols">
     <div><h3>막는 것</h3>
       <ul>
-        <li>금지어: RAG, SDK, 피처ID, 슬롯, 누름틀, Antigravity, <code>*_SLOT</code></li>
-        <li>깨진 글자, 장식 기호</li>
+        <li>금지어: RAG, SDK, 피처, 슬롯, 누름틀, Antigravity, 하네스, <code>*_SLOT</code></li>
+        <li>깨진 글자, 장식 문자(┏ ┓ ┗ ┛)</li>
         <li>근거 번호 없는 사실 문장</li>
         <li><code>uncollected</code>에 있는 도메인의 수치</li>
         <li>「자료 없음」 문장도 없이 비어 있는 장</li>
@@ -330,7 +330,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <tr><th>지금</th><th>바꾸는 것</th></tr>
     <tr><td>RAG, GIS 서지, 누름틀, 피처ID</td><td>글자 사전 한 표로 통일: 「보고서 근거」, 「공식 서지」, 「양식 칸」 …. 사용자에게 보이는 곳은 이 말만 쓴다</td></tr>
     <tr><td><code>RAG_CITATION_SLOT</code> 등 자리표시자</td><td>문서에 들어가지 않게 한다. 근거가 없으면 「자료 없음」과 이유</td></tr>
-    <tr><td>✓ △ ◌ ○, ┏ ┓ ※</td><td>기호는 화면에서만 쓰고 범례를 둔다. 제출 문서는 말로. 장식은 뺀다</td></tr>
+    <tr><td>✓ △ ◌ ○, ┏ ┓ ┗ ┛</td><td>기호는 항상 말과 함께 쓰고 범례를 둔다(현재 코드는 이미 그렇다). 장식 문자 ┏ ┓ ┗ ┛ 는 뺀다</td></tr>
     <tr><td>「동국문화재연구원」 고정 문구</td><td>설정값으로 옮긴다</td></tr>
     <tr><td>정리 방식</td><td><code>ui_terms</code>를 넓혀 금지어가 다시 들어오면 시험이 실패하게 잠근다</td></tr>
   </table></div>
@@ -341,7 +341,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
   <p class="sub">현황 표지는 단계가 끝날 때마다 고쳐서 다시 올립니다. 마지막 갱신: 2026-10-23, 설계 단계.</p>
   <div class="scroll status"><table>
     <tr><th>단계</th><th>하는 일</th><th>현황</th><th>끝났다는 기준 (확인 방법)</th></tr>
-    <tr><td>M0 정리</td><td>글자 사전, 자리표시자·기호·장식 제거, 금지어 시험</td><td><span class="tag t-todo">미착수</span></td><td>금지어 0건(시험), 생성 문서의 자리표시자 0건</td></tr>
+    <tr><td>M0 정리</td><td>글자 사전, 자리표시자·장식 제거, 금지어 시험</td><td><span class="tag t-sdk">진행</span> 개발 용어 37곳 · 자리표시자 · 장식 문자 정리 완료, 기관 이름 설정화 남음</td><td>금지어 0건(시험), 생성 문서의 자리표시자 0건</td></tr>
     <tr><td>M1 계약</td><td>JSON 세 가지 + 샘플 + 앱의 사실 묶음 내보내기</td><td><span class="tag t-todo">미착수</span></td><td>스키마 검증 시험 통과, 샘플 파일 저장</td></tr>
     <tr><td>M2 저장소</td><td>근거 저장소 하나로 읽기, 앱 안 DBpia 단추 숨김</td><td><span class="tag t-todo">미착수</span></td><td>경주 유적 3곳에서 같은 질문에 같은 근거, 직접 단추 없음</td></tr>
     <tr><td>M3 SDK 최소</td><td>꾸러미 조립 + 규칙 기반 뼈대 평가(AI 없이)</td><td><span class="tag t-todo">미착수</span></td><td>AI를 끈 상태에서 0·1·2·3·6·7장이 나온다</td></tr>
