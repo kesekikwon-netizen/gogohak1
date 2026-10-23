@@ -36,4 +36,8 @@ description: Build, test and commit Strata (ka-hgis) changes on Linux and push t
 - `origin`은 `kesekikwon-netizen/gogohak1`. Windows 실행이 약 11~25분 걸리고 한 번에 하나만 돈다.
 - 같은 그룹에서 **대기 중인 실행은 더 새 커밋이 오면 취소**되고, 이미 도는 실행은 계속된다. 그래서 푸시가 겹치면 중간 커밋의 실행은 `cancelled`로 보이는 것이 정상이다. 마지막 커밋의 실행이 그 전 변경을 모두 포함한다.
 - 결과 확인: `gh run list --repo kesekikwon-netizen/gogohak1 --limit 4`, 실패 이유: `gh run view <id> --repo … --log-failed | grep -E "error|FAIL"`. 기다릴 때는 백그라운드로 `until [ "$(gh run view <id> --json status -q .status)" = completed ]; do sleep 30; done`.
-- Windows에서만 나는 오류가 있다(예: `windows.h`의 `min`/`max` 매크로 → `NOMINMAX`, `HWND` 중복 정의). 리눅스 통과가 Windows 통과는 아니다. 마무리는 CI 초록으로 확인한다.
+- Windows에서만 나는 오류가 있다. 리눅스 통과가 Windows 통과는 아니다. 마무리는 CI 초록으로 확인한다. 2026-10-23에 만난 것:
+  - `HWND` 중복 정의(C2371): `SdkDef.h`가 Windows에서는 `<windows.h>`를 쓴다.
+  - `std::max`/`std::min` 깨짐(C2589): `windows.h` 앞에 `NOMINMAX`.
+  - `hwpsdk.lib` 못 찾음(LNK1104): `HwpSDKExport.h`가 MSVC에서 DLL 가져오기를 요구한다. SDK 소스를 `ka_core`에 직접 넣으므로 `HWPSDK_STATIC`을 준다.
+  - 한 번의 Windows 실행은 대기까지 합쳐 25~50분 걸린다. 오류는 한 번에 한 층씩 드러나므로, 실패 로그의 오류 종류(`error C`, `LNK`)를 처음부터 끝까지 보고 같은 종류를 한꺼번에 고친다.
