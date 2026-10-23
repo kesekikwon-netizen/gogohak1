@@ -28,13 +28,25 @@ struct SiteEvidenceRow {
   QString featureStatus = QStringLiteral("○");
   QString strataStatus = QStringLiteral("○");
   QString reportStatus = QStringLiteral("○");  // "✓" | "◌" | "○"
-  QString reportName;
+  QString reportName;        // 실제 대조한 로컬 PDF 파일명
   int pageNo = 0;
   int strataPageNo = 0;
   QString eraSummary;
   QString featureSummary;
   QString strataSummary;
   QString relationToSurvey;  // ⑤ 조사구역과의 연관성
+  // GIS 원자료의 공식 서지. 로컬 원문을 못 찾아도 이 값은 표에 남긴다.
+  QString heritageCode;
+  QString bibliography;      // GIS 보고서명(기관, 연도, 제목)
+  QString projectName;       // GIS 사업명
+  QString siteAddress;       // GIS 소재지
+  QString eraField;          // GIS 시대
+  QString heritagePresence;  // GIS 유적유무
+  QString permitNumber;      // GIS 허가번호
+  QString institution;       // GIS 조사기관
+  int reportYear = 0;        // GIS 서지의 연도
+  bool hasLocalPdf = false;  // 로컬 PDF 파일이 있음(색인 전 포함)
+  bool indexed = false;      // _rag_index.db 에 색인됨
 };
 
 struct SurveySnapshot {

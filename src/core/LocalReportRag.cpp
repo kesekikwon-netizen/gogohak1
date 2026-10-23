@@ -88,15 +88,6 @@ std::string extractJsonStr(std::string_view obj, std::string_view key) {
     out.push_back((obj[i] == '\\' && i + 1 < obj.size()) ? (obj[++i] == 'n' ? '\n' : obj[i]) : obj[i]);
   return out;
 }
-std::string cleanOneLine(std::string_view s, std::size_t maxLen = 130) {
-  std::string out;
-  for (char c : s) {
-    if (c == '\n' || c == '\r' || c == '\t' || c == ' ') { if (!out.empty() && out.back() != ' ') out.push_back(' '); }
-    else out.push_back(c);
-    if (out.size() >= maxLen) break;
-  }
-  return out;
-}
 }  // namespace
 
 std::filesystem::path LocalReportRag::ragScriptPath() { return strata::platform::platformService().reportPdfRootDir() / "_rag_index_and_search.py"; }
@@ -252,36 +243,6 @@ std::vector<LocalReportHit> LocalReportRag::search(std::string_view query_utf8, 
     ::sqlite3_finalize(stmt);
   }
   return ::sqlite3_close(db), hits;
-}
-SiteRagEvidence LocalReportRag::inspectSiteEvidence(std::string_view site_name_utf8, std::string_view region_utf8) {
-  SiteRagEvidence ev;
-  if (sqlite3* db = site_name_utf8.empty() ? nullptr : openRagDb()) {
-    sqlite3_stmt* st = nullptr;
-    const std::string like = "%" + std::string(site_name_utf8) + "%";
-    if (::sqlite3_prepare_v2(db, "SELECT report_name, total_pages, extraction_mode FROM documents WHERE report_name LIKE ? LIMIT 1", -1, &st, nullptr) == kSqliteOk) {
-      ::sqlite3_bind_text(st, 1, like.c_str(), static_cast<int>(like.size()), nullptr);
-      if (::sqlite3_step(st) == kSqliteRow) {
-        ev.report_name = colStr(st, 0), ev.total_pages = ::sqlite3_column_int(st, 1);
-        if (colStr(st, 2).find("scan_no_text") != std::string::npos) ev.status = ev.era_status = ev.feature_status = ev.strata_status = "◌";
-      }
-      ::sqlite3_finalize(st);
-    }
-    ::sqlite3_close(db);
-    if (ev.status == "◌") return ev;
-  }
-  auto hits = search(site_name_utf8, region_utf8, 4, -2);
-  if (hits.empty()) hits = search(site_name_utf8, region_utf8, 4, 2);
-  if (!hits.empty()) {
-    ev.status = ev.feature_status = "✓", ev.report_name = hits.front().report_name, ev.page_no = hits.front().page_no;
-    ev.feature_summary = cleanOneLine(hits.front().snippet.empty() ? hits.front().content : hits.front().snippet);
-    for (const auto& h : hits) {
-      for (const char* era : {"후기구석기", "구석기", "신석기", "청동기", "원삼국", "통일신라", "신라", "삼국", "백제", "가야", "고려", "조선"})
-        if (ev.era_summary.empty() && h.content.find(era) != std::string::npos) ev.era_summary = era, ev.era_status = "✓";
-      if (ev.strata_summary.empty() && hasAny(h.content, {"층위", "토층", "문화층", "생토", "사질점토"}))
-        ev.strata_status = "✓", ev.strata_page_no = h.page_no, ev.strata_summary = cleanOneLine(h.snippet.empty() ? h.content : h.snippet);
-    }
-  }
-  return ev;
 }
 std::string LocalReportRag::formatPromptContext(std::span<const LocalReportHit> hits) {
   std::ostringstream oss;

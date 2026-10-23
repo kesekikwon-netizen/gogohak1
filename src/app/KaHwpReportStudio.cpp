@@ -246,7 +246,9 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
     m_dbpiaSummary.synthesizedDiscussion = m_dbpiaBridge->buildStructuredDataSynthesis(m_dbpiaSummary.dbpiaAiTurns);
     HwpAcademicVisuals::appendDbpiaAndVisualSummaryToDoc(m_cachedSnap, m_dbpiaSummary, m_session.get());
     updateStepRail(6);
-    appendChatMessage(QStringLiteral("검증 완료"), QStringLiteral("학술문헌 %1편 및 층위 대비도·유구 비교표 조판 완료").arg(totalUnique));
+    appendChatMessage(QStringLiteral("검증 완료"), totalUnique > 0
+        ? QStringLiteral("학술문헌 %1편 및 층위 대비도·유구 비교표 조판 완료").arg(totalUnique)
+        : QStringLiteral("DBpia 수집 문헌 없음(Antigravity SDK/DBpia 응답 없음) — 문헌 표를 임의로 채우지 않았습니다."));
     syncUiFromSession(QString(), 100);
   });
 

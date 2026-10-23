@@ -91,6 +91,89 @@ class TestHwpSurveyReport : public QObject {
     QVERIFY(tplSession.renderPreviewHtml().contains(QStringLiteral("핵심 유구군")));
   }
 
+  void gisBibliographyFillsRowsWithoutLocalText() {
+    HwpSurveyReportService::SurveySnapshot snap;
+    snap.surveyTitle = QStringLiteral("경주 성동동 150-3번지 유적 시굴조사");
+    snap.surveyCrs = QStringLiteral("EPSG:5187");
+    snap.regionName = QStringLiteral("경주시");
+    NearbyHeritageExport::Item a;
+    a.datasetName = QStringLiteral("발굴조사구역");
+    a.siteName = QStringLiteral("경주 성동동 150-3번지 유적");
+    a.direction = QStringLiteral("동");
+    a.distanceMeters = 320;
+    a.heritageCode = QStringLiteral("EX1815950001");
+    a.reportName = QStringLiteral("화랑문화유산연구원, 2019, 경주 성동동 150-3번지 유적 발굴조사 보고서");
+    a.institution = QStringLiteral("화랑문화유산연구원");
+    snap.nearbySites.push_back(a);
+    NearbyHeritageExport::Item b;
+    b.datasetName = QStringLiteral("매장유산유존지역");
+    b.siteName = QStringLiteral("경주 황남동 유적");
+    b.direction = QStringLiteral("북");
+    b.distanceMeters = 80;
+    b.heritageCode = QStringLiteral("RH0000015824");
+    b.reportName = QStringLiteral("영남문화재연구원, 2002, 경주 황남동 유적 발굴조사 보고서");
+    b.institution = QStringLiteral("영남문화재연구원");
+    snap.nearbySites.push_back(b);
+
+    HwpSurveyReportService::ReportDocumentSession::populateRagEvidence(&snap, false);
+    QCOMPARE(snap.siteEntries.size(), 2);
+    for (const auto& row : snap.siteEntries) {
+      QCOMPARE(row.reportStatus, QStringLiteral("○"));
+      QVERIFY(!row.bibliography.isEmpty());
+      QVERIFY(row.relationToSurvey.contains(QStringLiteral("GIS 공식 서지")));
+      QVERIFY(row.reportYear > 0);
+    }
+    QCOMPARE(snap.siteEntries[0].reportYear, 2019);
+    QCOMPARE(snap.siteEntries[1].reportYear, 2002);
+
+    HwpSurveyReportService::ReportDocumentSession session;
+    QString err;
+    QVERIFY2(session.buildStandardReport(snap, &err), qPrintable(err));
+    const QString html = session.renderPreviewHtml();
+    QVERIFY(html.contains(QStringLiteral("GIS 보고서명(공식 서지)")));
+    QVERIFY(html.contains(QStringLiteral("화랑문화유산연구원, 2019")));
+    QVERIFY(html.contains(QStringLiteral("영남문화재연구원, 2002")));
+  }
+
+  void scanReportKeepsBibliographyAndDoesNotBorrowAnotherYear() {
+    if (!std::filesystem::exists(strata::core::LocalReportRag::ragDbPath()))
+      QSKIP("Local RAG DB not mounted on this machine");
+    HwpSurveyReportService::SurveySnapshot snap;
+    snap.surveyTitle = QStringLiteral("경주 성동동 150-3번지 유적 정밀발굴조사");
+    snap.regionName = QStringLiteral("경주시");
+    snap.surveyCrs = QStringLiteral("EPSG:5187");
+    NearbyHeritageExport::Item a;
+    a.datasetName = QStringLiteral("발굴조사구역");
+    a.siteName = QStringLiteral("경주 성동동 150-3번지 유적");
+    a.direction = QStringLiteral("조사구역 내");
+    a.heritageCode = QStringLiteral("EX1815950001");
+    a.projectName = QStringLiteral("경주 성동동 150-3번지 유적");
+    a.siteAddress = QStringLiteral("경상북도 경주시 성동동 150-3번지 일원");
+    a.reportName = QStringLiteral("화랑문화유산연구원, 2019, 경주 성동동 150-3번지 유적 발굴조사 보고서");
+    a.institution = QStringLiteral("화랑문화유산연구원");
+    snap.nearbySites.push_back(a);
+    NearbyHeritageExport::Item b = a;
+    b.siteName = QStringLiteral("경주 성동동 150-3번지 유적(2002)");
+    b.heritageCode = QStringLiteral("RH0000015824");
+    b.reportName = QStringLiteral("영남문화재연구원, 2002, 경주 성동동 150-3번지 유적 발굴조사 보고서");
+    b.institution = QStringLiteral("영남문화재연구원");
+    snap.nearbySites.push_back(b);
+
+    HwpSurveyReportService::ReportDocumentSession::populateRagEvidence(&snap, true);
+    QCOMPARE(snap.siteEntries.size(), 2);
+    const auto& scan = snap.siteEntries[0];
+    // 스캔본은 ◌, OCR로 색인된 원문은 ✓다. 어느 쪽이든 2019 서지를 유지해야 한다.
+    QVERIFY(scan.reportStatus == QStringLiteral("◌") || scan.reportStatus == QStringLiteral("✓"));
+    QVERIFY(scan.reportName.contains(QStringLiteral("성동동 150-3")));
+    QVERIFY(scan.bibliography.contains(QStringLiteral("2019")));
+    QVERIFY(scan.relationToSurvey.contains(QStringLiteral("성동동 150-3")));
+    QVERIFY(!scan.relationToSurvey.contains(QStringLiteral("2002")));
+    const auto& missed = snap.siteEntries[1];
+    QCOMPARE(missed.reportStatus, QStringLiteral("○"));
+    QVERIFY(missed.reportName.isEmpty());  // 2002 보고서를 2019 원문에 붙이지 않는다.
+    QVERIFY(missed.bibliography.contains(QStringLiteral("2002")));
+  }
+
   void gyeongjuRagEvidenceAndStratigraphyVisuals() {
     if (!std::filesystem::exists(strata::core::LocalReportRag::ragDbPath()))
       QSKIP("Local RAG DB not mounted on this machine");

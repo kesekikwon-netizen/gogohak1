@@ -1,4 +1,5 @@
 #include "HwpSurveyReportService.h"
+#include "HwpSurveyEvidence.h"
 #include "LayerFeatures.h"
 #include "LayerOps.h"
 #include "LocalReportRag.h"
@@ -50,20 +51,6 @@ void appendTableToModel(HWPSDK::Document* doc, const QVector<QStringList>& rows,
     }
   impl->Model().tables.push_back(std::move(tbl));
 }
-QString detectRegionName(const SurveySnapshot& snap) {
-  const QString s = snap.surveyTitle + QLatin1Char(' ') + (snap.nearbySites.isEmpty() ? QString() : snap.nearbySites.first().siteName);
-  const QString q = QString::fromStdString(strata::core::LocalReportRag::extractRegionScope(s.toStdString(), "경주시")).section(QLatin1Char(','), 0, 0);
-  return q == QStringLiteral("경주") ? QStringLiteral("경주시") : q;
-}
-QString buildDefaultDiscussion(const SurveySnapshot& snap) {
-  const QString base = QStringLiteral("본 조사는 %1 일원(면적 %2㎡, 좌표계 %3)을 대상으로 수행되었다.")
-                           .arg(snap.surveyTitle, QLocale(QLocale::Korean).toString(std::round(snap.totalAreaSqm)), snap.surveyCrs);
-  if (snap.nearbySites.isEmpty())
-    return base + QStringLiteral(" 로드된 주변유적 레이어가 없으며 지역 보고서 RAG(%1 %2권)를 기준으로 검토한다.").arg(snap.regionName).arg(snap.regionTotalReports);
-  const auto& n = snap.nearbySites.first();
-  return base + QStringLiteral(" GIS 최단거리 측정 결과, 반경 %1m 내 총 %2개소 유적이 분포하며 최단거리 유적은 %3(경계 기준 %4 %5m)이다.")
-                    .arg(qRound(snap.radiusMeters)).arg(snap.nearbySites.size()).arg(n.siteName, n.direction).arg(n.distanceMeters);
-}
 }  // namespace
 struct ReportDocumentSession::Impl {
   HWPSDK::Application app;
@@ -74,48 +61,6 @@ struct ReportDocumentSession::Impl {
 };
 ReportDocumentSession::ReportDocumentSession() : m_impl(new Impl()) {}
 ReportDocumentSession::~ReportDocumentSession() { delete m_impl; }
-
-void ReportDocumentSession::populateRagEvidence(SurveySnapshot* snap, bool queryRagDb) {
-  if (!snap) return;
-  if (snap->regionName.isEmpty()) snap->regionName = detectRegionName(*snap);
-  if (queryRagDb) {
-    const auto rs = strata::core::LocalReportRag::queryRegionStats(snap->regionName.toStdString());
-    snap->regionTotalReports = rs.total_reports, snap->regionTextReports = rs.text_reports, snap->regionScanReports = rs.scan_reports;
-  }
-  snap->siteEntries.clear();
-  for (int i = 0; i < snap->nearbySites.size(); ++i) {
-    const auto& s = snap->nearbySites[i];
-    SiteEvidenceRow row{s.datasetName, s.siteName, s.distanceMeters, s.direction.isEmpty() ? QStringLiteral("인접") : s.direction};
-    if (queryRagDb && i < 15) {
-      const auto ev = strata::core::LocalReportRag::inspectSiteEvidence(s.siteName.toStdString(), snap->regionName.toStdString());
-      row.reportStatus = QString::fromStdString(ev.status), row.eraStatus = QString::fromStdString(ev.era_status);
-      row.featureStatus = QString::fromStdString(ev.feature_status), row.strataStatus = QString::fromStdString(ev.strata_status);
-      row.reportName = QString::fromStdString(ev.report_name), row.pageNo = ev.page_no;
-      row.strataPageNo = ev.strata_page_no > 0 ? ev.strata_page_no : ev.page_no;
-      row.eraSummary = ev.era_summary.empty() ? QStringLiteral("근거 없음·확인 필요") : QString::fromStdString(ev.era_summary);
-      row.featureSummary = ev.feature_summary.empty() ? QStringLiteral("원문 미기재·확인 필요") : QString::fromStdString(ev.feature_summary);
-      row.strataSummary = ev.strata_summary.empty() ? QStringLiteral("토층 미기재·확인 필요") : QString::fromStdString(ev.strata_summary);
-    } else {
-      row.eraSummary = QStringLiteral("근거 없음·확인 필요"), row.featureSummary = QStringLiteral("원문 미확보"), row.strataSummary = QStringLiteral("토층 미확보");
-    }
-    row.relationToSurvey = QStringLiteral("조사구역 경계 기준 %1 %2m(GIS 최단거리) 이격. %3")
-        .arg(row.direction).arg(row.distanceMeters)
-        .arg(row.reportStatus == QStringLiteral("✓")
-                 ? QStringLiteral("『%1』(p.%2) 확인 유구·문화층 동일 지형면 연장 가능성 검토 대상.").arg(row.reportName).arg(row.pageNo)
-                 : (row.reportStatus == QStringLiteral("◌") ? QStringLiteral("스캔본(『%1』) 도면·토층 수동 대조 필요.").arg(row.reportName)
-                                                            : QStringLiteral("원문 미확보로 유구 연장 단정 유보(확인 필요).")));
-    snap->siteEntries.push_back(std::move(row));
-  }
-  if (snap->siteEntries.isEmpty() && queryRagDb) {
-    for (const auto& h : strata::core::LocalReportRag::search("주거지 수혈 건물지 고분 석곽묘 토기 기와", snap->regionName.toStdString(), 10, 1)) {
-      const QString rpt = QString::fromStdString(h.report_name), snip = QString::fromStdString(h.snippet.empty() ? h.content : h.snippet).simplified().left(95);
-      snap->siteEntries.push_back({QStringLiteral("지역 보고서 RAG"), QStringLiteral("[%1] %2").arg(QString::fromStdString(h.sigungu), QFileInfo(rpt).completeBaseName()), 0, QStringLiteral("권역"), QStringLiteral("✓"), QStringLiteral("✓"), QStringLiteral("✓"), QStringLiteral("✓"), rpt, h.page_no, h.page_no, QStringLiteral("원문 수록"), snip, snip, QStringLiteral("동일 권역(%1) 발굴조사보고서 원문 대조 대상.").arg(QString::fromStdString(h.sigungu))});
-    }
-  }
-  snap->discussionDraft = buildDefaultDiscussion(*snap);
-  if (queryRagDb && snap->regionTotalReports > 0)
-    snap->ragCitationSlotText = QStringLiteral("[로컬 발굴조사보고서 RAG 연동] %1 총 %2권(본문 %3권 · 스캔 %4권).").arg(snap->regionName).arg(snap->regionTotalReports).arg(snap->regionTextReports).arg(snap->regionScanReports);
-}
 
 SurveySnapshot ReportDocumentSession::collectFromProject(QgsProject* project, bool enableRagSlot, const RagSlotCallback& ragSlot, double radiusMeters) {
   SurveySnapshot snap;
@@ -165,19 +110,35 @@ bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QStr
   if (maxStage <= 1) return true;
 
   insertStyledParagraph(doc, QStringLiteral("Ⅱ. 유적의 위치와 환경 — 2. 역사·고고 환경 (<표 1>)"), 1300, true, 1);
-  QVector<QStringList> siteRows = {{QStringLiteral("연번"), QStringLiteral("유적명"), QStringLiteral("최단거리·방위(G)"), QStringLiteral("시대(R)"), QStringLiteral("유구·층위(R)"), QStringLiteral("보고서 출처")}};
-  for (int i = 0; i < s.siteEntries.size() && i < 30; ++i) {
+  QVector<QStringList> siteRows = {{QStringLiteral("연번"), QStringLiteral("유적명"), QStringLiteral("최단거리·방위(G)"),
+                                    QStringLiteral("GIS 보고서명(공식 서지)"), QStringLiteral("시대(R)"),
+                                    QStringLiteral("유구·층위(R)"), QStringLiteral("원문 대조")}};
+  for (int i = 0; i < s.siteEntries.size(); ++i) {
     const auto& e = s.siteEntries[i];
-    const QString src = e.reportStatus == QStringLiteral("✓") ? QStringLiteral("✓ %1 (p.%2)").arg(e.reportName).arg(e.pageNo)
-                        : (e.reportStatus == QStringLiteral("◌") ? QStringLiteral("◌ 스캔 (%1)").arg(e.reportName) : QStringLiteral("○ 없음"));
-    siteRows.push_back({QString::number(i + 1), e.siteName, QStringLiteral("%1 %2m").arg(e.direction).arg(e.distanceMeters), e.eraSummary, e.featureSummary, src});
+    const QString bib = Detail::bibliographyLine(e);
+    siteRows.push_back({QString::number(i + 1), e.siteName, QStringLiteral("%1 %2m").arg(e.direction).arg(e.distanceMeters),
+                        bib.isEmpty() ? QStringLiteral("서지 없음") : bib, e.eraSummary, e.featureSummary,
+                        Detail::reportSourceLabel(e)});
   }
-  if (siteRows.size() == 1) siteRows.push_back({QStringLiteral("-"), QStringLiteral("반경 내 주변유적 없음"), QStringLiteral("-"), QStringLiteral("-"), QStringLiteral("-"), QStringLiteral("-")});
+  if (siteRows.size() == 1)
+    siteRows.push_back({QStringLiteral("-"), QStringLiteral("반경 내 주변유적 없음"), QStringLiteral("-"),
+                        QStringLiteral("-"), QStringLiteral("-"), QStringLiteral("-"), QStringLiteral("-")});
   appendTableToModel(doc, siteRows);
   for (int i = 0; i < s.siteEntries.size() && i < 4; ++i) {
     const auto& e = s.siteEntries[i];
-    insertStyledParagraph(doc, QStringLiteral("(%1) %2 [조사구역 경계 기준 %3 %4m]\n  • 층위·유구: %5 / %6\n  • ⑤ 조사구역과의 연관성: %7")
-                                   .arg(i + 1).arg(e.siteName, e.direction).arg(e.distanceMeters).arg(e.strataSummary, e.featureSummary, e.relationToSurvey), 950, false, 0);
+    const QString bib = Detail::bibliographyLine(e);
+    const QString meta = e.institution.isEmpty() ? QString() : QStringLiteral(" / %1").arg(e.institution);
+    QStringList facts;
+    if (!e.heritageCode.isEmpty()) facts << QStringLiteral("유산코드 %1").arg(e.heritageCode);
+    if (!e.eraField.isEmpty()) facts << QStringLiteral("시대 %1").arg(e.eraField);
+    if (!e.heritagePresence.isEmpty()) facts << QStringLiteral("유적유무 %1").arg(e.heritagePresence);
+    if (!e.permitNumber.isEmpty()) facts << QStringLiteral("허가번호 %1").arg(e.permitNumber);
+    if (!e.siteAddress.isEmpty()) facts << QStringLiteral("소재지 %1").arg(e.siteAddress);
+    insertStyledParagraph(doc, QStringLiteral("(%1) %2 [조사구역 경계 기준 %3 %4m]\n  • GIS 서지: %5%6\n  • GIS 원자료: %7\n  • 층위·유구: %8 / %9\n  • ⑤ 조사구역과의 연관성: %10")
+                                   .arg(i + 1).arg(e.siteName, e.direction).arg(e.distanceMeters)
+                                   .arg(bib.isEmpty() ? QStringLiteral("서지 없음") : bib, meta)
+                                   .arg(facts.isEmpty() ? QStringLiteral("기재 없음") : facts.join(QStringLiteral(" · ")),
+                                        e.strataSummary, e.featureSummary, e.relationToSurvey), 950, false, 0);
   }
   if (maxStage == 2) return true;
 
@@ -236,7 +197,7 @@ bool ReportDocumentSession::applyUserRequest(const QString& userPrompt, const Su
     if (replyOut) *replyOut = QStringLiteral("'%1' → '%2' 치환 완료").arg(m.captured(1), m.captured(2));
     return true;
   }
-  const std::string defReg = (snap.regionName.isEmpty() ? detectRegionName(snap) : snap.regionName).toStdString();
+  const std::string defReg = (snap.regionName.isEmpty() ? Detail::detectRegionName(snap) : snap.regionName).toStdString();
   const std::string regScope = strata::core::LocalReportRag::extractRegionScope(req.toStdString(), defReg);
   const auto hits = strata::core::LocalReportRag::search(req.toStdString(), regScope, 8, 2);
   QString gen = QStringLiteral("[다차원 고찰 보완 · 지역범위: %1] %2").arg(QString::fromStdString(regScope), req);

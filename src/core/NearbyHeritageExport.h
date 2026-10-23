@@ -17,6 +17,16 @@ struct Item {
   int distanceMeters = 0;   // 조사구역 경계로부터 최단 거리(m)
   double azimuthDeg = -1.;  // 북 기준 시계방향 방위각(0~360), 조사구역 내(중첩)면 -1
   QString description;      // 예: "조사구역에서 북동쪽으로 약 125m", "조사구역 내 (0m)"
+  // GIS 원자료의 공식 서지. 자료에 없는 항목은 빈 값으로 둔다(지어내지 않는다).
+  QString heritageCode;     // 유산코드
+  QString reportName;       // 보고서명(기관, 연도, 제목)
+  QString projectName;      // 사업명
+  QString siteAddress;      // 소재지
+  QString institution;      // 조사기관
+  QString era;              // 시대
+  QString heritagePresence; // 유적유무
+  QString permitNumber;     // 허가번호
+  QString featureName;      // 유적명(발굴의 "A지구" 같은 세부 이름)
 };
 
 struct Result {

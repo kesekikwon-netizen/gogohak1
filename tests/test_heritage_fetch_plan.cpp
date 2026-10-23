@@ -188,6 +188,8 @@ private slots:
                          QStringLiteral("ogr"));
     QVERIFY(sheet.isValid());
     QCOMPARE(int(sheet.featureCount()), 3);
+    QVERIFY(sheet.fields().indexOf(QStringLiteral("보고서명(서지)")) >= 0);
+    QVERIFY(sheet.fields().indexOf(QStringLiteral("유산코드")) >= 0);
 
     auto* area2 = new QgsVectorLayer(QStringLiteral("Polygon?crs=EPSG:5187"), QStringLiteral("조사구역 2"),
                                      QStringLiteral("memory"));
@@ -196,6 +198,77 @@ private slots:
     project.addMapLayer(area2);
     if (auto* n1 = project.layerTreeRoot()->findLayer(area->id())) n1->setItemVisibilityChecked(false);
     QCOMPARE(NearbyHeritageExport::resolveSourceLayer(&project, nullptr), area2);
+  }
+
+  void nearbyHeritageKeepsSameNameSeparateAndCarriesGisBibliography() {
+    QgsProject project;
+    project.setCrs(QgsCoordinateReferenceSystem(QStringLiteral("EPSG:5187")));
+    auto* area = new QgsVectorLayer(QStringLiteral("Polygon?crs=EPSG:5187"), QStringLiteral("조사구역"),
+                                    QStringLiteral("memory"));
+    LayerOps::markSurveyLayer(area, QStringLiteral("survey_area"));
+    QgsFeature af(area->fields());
+    af.setGeometry(QgsGeometry::fromRect(QgsRectangle(200000, 450000, 200100, 450100)));
+    area->dataProvider()->addFeature(af);
+    project.addMapLayer(area);
+
+    auto* buried = new QgsVectorLayer(QStringLiteral("Polygon?crs=EPSG:5187"),
+                                      QStringLiteral("매장유산유존지역"), QStringLiteral("memory"));
+    buried->dataProvider()->addAttributes({QgsField(QStringLiteral("유산코드"), QMetaType::Type::QString),
+                                           QgsField(QStringLiteral("유적명"), QMetaType::Type::QString)});
+    buried->updateFields();
+    HeritageLayoutNumbers::tagDataset(buried, HeritageDataset::BuriedHeritageArea);
+    auto addBuried = [&](const QString& code, const QString& name, const QgsRectangle& rect) {
+      QgsFeature f(buried->fields());
+      f.setGeometry(QgsGeometry::fromRect(rect));
+      f.setAttribute(0, code);
+      f.setAttribute(1, name);
+      buried->dataProvider()->addFeature(f);
+    };
+    addBuried(QStringLiteral("RH1"), QStringLiteral("조사구역내 유적"), QgsRectangle(200010, 450010, 200020, 450020));
+    addBuried(QStringLiteral("RH2"), QStringLiteral("조사구역내 유적"), QgsRectangle(200030, 450030, 200040, 450040));
+    project.addMapLayer(buried);
+
+    auto* excavation = new QgsVectorLayer(QStringLiteral("Polygon?crs=EPSG:5187"),
+                                          QStringLiteral("발굴조사구역"), QStringLiteral("memory"));
+    excavation->dataProvider()->addAttributes(
+        {QgsField(QStringLiteral("유산코드"), QMetaType::Type::QString),
+         QgsField(QStringLiteral("사업명"), QMetaType::Type::QString),
+         QgsField(QStringLiteral("유적명"), QMetaType::Type::QString),
+         QgsField(QStringLiteral("보고서명"), QMetaType::Type::QString),
+         QgsField(QStringLiteral("조사기관"), QMetaType::Type::QString),
+         QgsField(QStringLiteral("소재지"), QMetaType::Type::QString)});
+    excavation->updateFields();
+    HeritageLayoutNumbers::tagDataset(excavation, HeritageDataset::ExcavationSurveyArea);
+    QgsFeature ef(excavation->fields());
+    ef.setGeometry(QgsGeometry::fromRect(QgsRectangle(200050, 450050, 200060, 450060)));
+    ef.setAttribute(0, QStringLiteral("EX1"));
+    ef.setAttribute(1, QStringLiteral("경주 성동동 150-3번지 유적"));
+    ef.setAttribute(2, QStringLiteral("A지구"));
+    ef.setAttribute(3, QStringLiteral("화랑문화유산연구원, 2019, 경주 성동동 150-3번지 유적 발굴조사 보고서"));
+    ef.setAttribute(4, QStringLiteral("화랑문화유산연구원"));
+    ef.setAttribute(5, QStringLiteral("경상북도 경주시 성동동 150-3번지 일원"));
+    excavation->dataProvider()->addFeature(ef);
+    project.addMapLayer(excavation);
+
+    const auto result = NearbyHeritageExport::collect(&project, nullptr, 500.0);
+    QVERIFY2(result.ok(), qPrintable(result.error));
+    QCOMPARE(result.items.size(), 3);  // 같은 이름이어도 유산코드가 다르면 합치지 않는다.
+    int buriedSameName = 0, excavationSeen = 0;
+    for (const auto& item : result.items) {
+      if (item.datasetName == HeritageStyle::layerName(HeritageDataset::BuriedHeritageArea)) {
+        QCOMPARE(item.siteName, QStringLiteral("조사구역내 유적"));
+        ++buriedSameName;
+      }
+      if (item.heritageCode == QStringLiteral("EX1")) {
+        ++excavationSeen;
+        QCOMPARE(item.siteName, QStringLiteral("경주 성동동 150-3번지 유적"));  // 유적명(A지구)이 아니라 사업명
+        QCOMPARE(item.featureName, QStringLiteral("A지구"));
+        QCOMPARE(item.institution, QStringLiteral("화랑문화유산연구원"));
+        QVERIFY(item.reportName.contains(QStringLiteral("2019")));
+      }
+    }
+    QCOMPARE(buriedSameName, 2);
+    QCOMPARE(excavationSeen, 1);
   }
 };
 

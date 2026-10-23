@@ -10,6 +10,8 @@
 
 namespace strata::core {
 
+struct LocalReportMatchResult;
+
 struct LocalReportHit {
   std::string sigungu;
   std::string macro_region;
@@ -43,13 +45,17 @@ struct SiteRagEvidence {
   std::string era_status = "○";
   std::string feature_status = "○";
   std::string strata_status = "○";
-  std::string report_name;
+  std::string report_name;         // 실제 로컬 PDF 파일명
   int page_no = 0;
   int strata_page_no = 0;
   int total_pages = 0;
   std::string era_summary;
   std::string feature_summary;
   std::string strata_summary;
+  bool has_local_pdf = false;      // 로그에서 PDF를 찾았으나 아직 색인되지 않은 경우
+  bool indexed = false;            // _rag_index.db documents 에 존재
+  int report_year = 0;
+  std::string institution;
 };
 
 class LocalReportRag {
@@ -77,6 +83,10 @@ class LocalReportRag {
 
   static SiteRagEvidence inspectSiteEvidence(std::string_view site_name_utf8,
                                              std::string_view region_utf8 = {});
+  // GIS 보고서명으로 찾은 특정 보고서(rel_path) 안에서만 시대·유구·층위 근거를 뽑는다.
+  static SiteRagEvidence inspectMatchedReport(const LocalReportMatchResult& match,
+                                              std::string_view hint_utf8,
+                                              std::string_view region_utf8 = {});
 
   static std::vector<LocalReportHit> parseSearchJson(std::string_view json_utf8);
   static std::string formatPromptContext(std::span<const LocalReportHit> hits);

@@ -1,4 +1,5 @@
 #include "HwpAcademicVisuals.h"
+#include "HwpSurveyEvidence.h"
 #include "LocalReportRag.h"
 
 #include <QJsonObject>
@@ -101,9 +102,7 @@ QString renderVisualsAndDbpiaSectionHtml(const HwpSurveyReportService::SurveySna
   int colCount = 0;
   for (const auto& e : snap.siteEntries) {
     if (colCount >= 3) break;
-    const QString cite = e.reportStatus == QStringLiteral("✓")
-                             ? QStringLiteral("✓ 『%1』 p.%2").arg(e.reportName).arg(e.strataPageNo > 0 ? e.strataPageNo : e.pageNo)
-                             : (e.reportStatus == QStringLiteral("◌") ? QStringLiteral("◌ 스캔본(『%1』)").arg(e.reportName) : QStringLiteral("○ 원문 없음"));
+    const QString cite = HwpSurveyReportService::Detail::reportSourceLabel(e);
     html += renderStrataColumnCell(e.siteName.left(14), QStringLiteral("경계 기준 %1 %2m").arg(e.direction).arg(e.distanceMeters),
                                    e.strataSummary.left(56), QStringLiteral("[%1] %2").arg(e.eraSummary, e.featureSummary.left(50)), cite, false);
     ++colCount;
@@ -172,8 +171,7 @@ QString renderVerificationReportHtml(const HwpSurveyReportService::SurveySnapsho
               .arg(qRound(snap.totalAreaSqm)).arg(snap.surveyPolygonCount).arg(snap.surveyCrs.toHtmlEscaped());
   for (int i = 0; i < snap.siteEntries.size(); ++i) {
     const auto& e = snap.siteEntries[i];
-    const QString cite = e.reportStatus == QStringLiteral("✓") ? QStringLiteral("『%1』 p.%2").arg(e.reportName).arg(e.pageNo)
-                         : (e.reportStatus == QStringLiteral("◌") ? QStringLiteral("스캔본 『%1』").arg(e.reportName) : QStringLiteral("원문 없음"));
+    const QString cite = HwpSurveyReportService::Detail::reportSourceLabel(e);
     const QString badge = e.reportStatus == QStringLiteral("✓") ? QStringLiteral("<b>✓ 확인</b>") : (e.reportStatus == QStringLiteral("◌") ? QStringLiteral("◌ 스캔본") : QStringLiteral("○ 미기재"));
     html += QStringLiteral("<tr><td align='center'>Ⅱ-%1</td><td><b>%2</b> (경계 기준 %3 %4m) · %5</td><td align='center'>G+R</td><td>%6</td><td align='center'>%7</td></tr>")
                 .arg(i + 1).arg(e.siteName.toHtmlEscaped(), e.direction.toHtmlEscaped()).arg(e.distanceMeters).arg(e.featureSummary.left(65).toHtmlEscaped(), cite.toHtmlEscaped(), badge);
