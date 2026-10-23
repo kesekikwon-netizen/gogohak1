@@ -21,7 +21,10 @@ const STATE = path.join(OUT_DIR, 'ai_state.json');
 const AI_URL = 'https://ai.dbpia.co.kr/ko/search';
 const LOGIN_URL = 'https://www.dbpia.co.kr/member/login';
 
-const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+const log = (...a) => {
+  const kst = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(11, 19);
+  console.log(kst, ...a);
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function state(extra = {}) {
