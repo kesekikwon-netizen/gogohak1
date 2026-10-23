@@ -147,6 +147,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   auto* btnOrgLogin = new QPushButton(QStringLiteral("기관 로그인"), dbpiaPane);
   auto* btnDbpiaAi = new QPushButton(QStringLiteral("DBpia AI"), dbpiaPane);
   auto* btnHarvest = new QPushButton(QStringLiteral("자동 문헌수집 실행"), dbpiaPane);
+  btnHarvest->setVisible(false);  // 앱 안에서 논문을 직접 모으는 길은 수집 도구가 연결될 때까지 막아 둔다(설계도 12절).
   auto* chkRemember = new QCheckBox(QStringLiteral("로그인 기억"), dbpiaPane);
   chkRemember->setToolTip(QStringLiteral("켜면 이 PC에 DBpia 로그인을 저장합니다. 공용 PC에서는 켜지 마세요."));
   connect(chkRemember, &QCheckBox::toggled, this, [](bool on) {
@@ -168,7 +169,6 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   connect(btnLogin, &QPushButton::clicked, this, [ensureDbpiaWeb] { ensureDbpiaWeb(QStringLiteral("https://www.dbpia.co.kr/member/login")); });
   connect(btnOrgLogin, &QPushButton::clicked, this, [ensureDbpiaWeb] { ensureDbpiaWeb(QStringLiteral("https://www.dbpia.co.kr/member/b2bLogin")); });
   connect(btnDbpiaAi, &QPushButton::clicked, this, [ensureDbpiaWeb] { ensureDbpiaWeb(QStringLiteral("https://ai.dbpia.co.kr/ko/search")); });
-  connect(btnHarvest, &QPushButton::clicked, this, [this] { startDbpiaResearch(m_promptEdit ? m_promptEdit->text() : QString()); });
   m_centerStack->addWidget(m_previewView);
   m_centerStack->addWidget(m_verifyView);
   m_centerStack->addWidget(m_compareView);

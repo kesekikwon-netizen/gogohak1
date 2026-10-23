@@ -102,6 +102,28 @@ class TestUiTerms : public QObject {
     }
     QVERIFY2(hits.isEmpty(), qUtf8Printable(QStringLiteral("%1건\n").arg(hits.size()) + hits.join(QLatin1Char('\n'))));
   }
+
+  // 앱 안에서 DBpia 를 직접 부르는 길은 수집 도구가 연결될 때까지 닫아 둔다(설계도 12절, 2026-10-23 사용자 결정).
+  // 보고서 창에서 startDbpiaResearch 를 부르는 곳이 없어야 하고, 「자동 문헌수집 실행」 단추는 숨겨져 있어야 한다.
+  void directDbpiaCallStaysClosed() {
+    const QString root = QString::fromUtf8(KA_SOURCE_DIR);
+    QStringList hits;
+    QDirIterator it(root + QStringLiteral("/src/app"), {QStringLiteral("KaHwpReportStudio*.cpp")}, QDir::Files);
+    while (it.hasNext()) {
+      const QString path = it.next();
+      QFile file(path);
+      QVERIFY(file.open(QIODevice::ReadOnly));
+      const QString text = QString::fromUtf8(file.readAll());
+      const QStringList lines = text.split(QLatin1Char('\n'));
+      for (int n = 0; n < lines.size(); ++n)
+        if (lines.at(n).contains(QStringLiteral("startDbpiaResearch(")) && !lines.at(n).contains(QStringLiteral("KaHwpReportStudio::startDbpiaResearch(")) &&
+            !lines.at(n).trimmed().startsWith(QStringLiteral("//")))
+          hits << QStringLiteral("%1:%2 %3").arg(path.mid(root.size() + 1)).arg(n + 1).arg(lines.at(n).trimmed());
+      if (path.endsWith(QStringLiteral("KaHwpReportStudio.cpp")))
+        QVERIFY2(text.contains(QStringLiteral("btnHarvest->setVisible(false)")), "자동 문헌수집 실행 단추가 보입니다");
+    }
+    QVERIFY2(hits.isEmpty(), qUtf8Printable(hits.join(QLatin1Char('\n'))));
+  }
 };
 
 QTEST_GUILESS_MAIN(TestUiTerms)

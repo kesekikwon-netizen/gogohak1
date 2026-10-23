@@ -175,6 +175,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <tr><td>산출물 모양</td><td>지금 문서는 조사가 끝난 뒤의 발굴(시굴)조사 보고서 틀(Ⅰ~Ⅵ장)</td><td>사용자가 원하는 시굴 전 평가서가 아니다</td></tr>
     <tr><td>문서 속 내부 표지</td><td><code>RAG_CITATION_SLOT</code>, 「RAG 연결 슬롯 대기 중」, 「OpenHwpSDK 초기화 실패」가 문서에 들어갈 수 있다</td><td>제출물에 쓰레기가 남는다</td></tr>
     <tr><td>내부 용어 노출</td><td>보고서 관련 글자에 「RAG」 22곳, 「GIS 서지」 10곳, 「누름틀」 6곳, 「피처ID」 3곳</td><td>현장 사용자가 모르는 말</td></tr>
+    <tr><td>가짜 진행 표시</td><td>「작성 시작」 뒤 0.32초 타이머가 단계를 올리며 「사실·인용 교차검증」, 「집필」, 「작성 완료」를 보여 주지만 실제로는 4단계까지 문서를 쌓을 뿐이다</td><td>하지 않은 일을 했다고 보여 준다</td></tr>
     <tr><td>기호</td><td>✓ △ ◌ ○ 가 설명 없이 표에 들어가고 ┏ ┓ 같은 장식도 있다</td><td>뜻 모를 글자</td></tr>
   </table></div>
   <div class="note ok"><b>이미 잘 된 것, 버리지 않습니다.</b> <code>GisFactHarness::Ledger</code>(앱이 계산한 값만 담고 없는 자료는 잠금), 근거 4단계 라벨, 「임의로 채우지 않았습니다」 원칙. 이것이 계약의 뼈대가 됩니다.</div>
@@ -341,9 +342,9 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
   <p class="sub">현황 표지는 단계가 끝날 때마다 고쳐서 다시 올립니다. 마지막 갱신: 2026-10-23, M0 진행 · M1 완료. 안티그라비티 SDK와 RAG 수집은 기다리는 중이라 지금 할 수 있는 것만 진행합니다.</p>
   <div class="scroll status"><table>
     <tr><th>단계</th><th>하는 일</th><th>현황</th><th>끝났다는 기준 (확인 방법)</th></tr>
-    <tr><td>M0 정리</td><td>글자 사전, 자리표시자·장식 제거, 금지어 시험</td><td><span class="tag t-sdk">진행</span> 개발 용어 37곳 · 자리표시자 · 장식 문자 정리 완료, 기관 이름 설정화 남음</td><td>금지어 0건(시험), 생성 문서의 자리표시자 0건</td></tr>
+    <tr><td>M0 정리</td><td>글자 사전, 자리표시자·장식 제거, 금지어 시험, 진행 표시를 실제 작업과 맞추기</td><td><span class="tag t-sdk">진행</span> 개발 용어 37곳 · 자리표시자 · 장식 문자 정리 완료. 남음: 가짜 진행 표시, 기관 이름 설정화</td><td>금지어 0건(시험), 생성 문서의 자리표시자 0건</td></tr>
     <tr><td>M1 계약</td><td>JSON 세 가지 + 샘플 + 앱의 사실 묶음 내보내기</td><td><span class="tag t-ok">완료</span> 함수·검사기·시험·샘플 (화면 연결은 M3)</td><td>스키마 검증 시험 통과, 샘플 파일 저장</td></tr>
-    <tr><td>M2 저장소</td><td>근거 저장소 하나로 읽기, 앱 안 DBpia 단추 숨김</td><td><span class="tag t-todo">미착수</span></td><td>경주 유적 3곳에서 같은 질문에 같은 근거, 직접 단추 없음</td></tr>
+    <tr><td>M2 저장소</td><td>근거 저장소 하나로 읽기, 앱 안 DBpia 직접 호출 닫기</td><td><span class="tag t-sdk">진행</span> 직접 호출 닫기 완료(시험으로 잠금), 저장소 통합은 수집 완료 후</td><td>경주 유적 3곳에서 같은 질문에 같은 근거, 직접 단추 없음</td></tr>
     <tr><td>M3 SDK 최소</td><td>꾸러미 조립 + 규칙 기반 뼈대 평가(AI 없이)</td><td><span class="tag t-todo">미착수</span></td><td>AI를 끈 상태에서 0·1·2·3·6·7장이 나온다</td></tr>
     <tr><td>M4 종합·집필</td><td>Antigravity가 4·5장과 요약, 근거 번호 부착</td><td><span class="tag t-todo">미착수</span></td><td>근거 번호 없는 사실 문장 0건(출고 검사)</td></tr>
     <tr><td>M5 모식도</td><td>나노바나나 프로, 채택 절차, 부록 B</td><td><span class="tag t-todo">미착수</span></td><td>모든 그림에 표시와 근거 번호</td></tr>

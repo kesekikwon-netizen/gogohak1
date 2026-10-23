@@ -176,9 +176,8 @@ void KaHwpReportStudio::submitUserPrompt(const QString& promptText) {
       req.contains(QStringLiteral("분포")) || req.contains(QStringLiteral("변화")))
     m_centerStack->setCurrentWidget(m_compareView);
   if (req.contains(QStringLiteral("논문")) || req.contains(QStringLiteral("DBpia"), Qt::CaseInsensitive))
-    startDbpiaResearch(req);
-  else
-    syncUiFromSession(QStringLiteral("요청 반영 완료: ") + req, 100);
+    appendChatMessage(QStringLiteral("안내"), QStringLiteral("논문 수집은 아직 이 화면에서 하지 않습니다. 지금은 GIS 값과 보고서 근거로 작성합니다."));
+  syncUiFromSession(QStringLiteral("요청 반영 완료: ") + req, 100);
 }
 
 void KaHwpReportStudio::onOpenTemplateClicked() {
