@@ -255,3 +255,47 @@ test('lowering, dropping or deleting the baseline checks the listed file even ou
   };
   assert.equal(ask(change(t, shrinkBoth), 'git commit -m "refactor: 줄임"'), null);
 });
+
+// 2026-10-23: development runs on Linux, where the evidence lives in build-linux/ (no Release/ and no .exe).
+function linuxEvidence(repo, { exeOffset = 60, logOffset = 120, log = '1/1 Test: adds\nTest Passed.\nEnd testing: now\n' } = {}) {
+  const dir = path.join(repo, 'build-linux');
+  fs.mkdirSync(path.join(dir, 'Testing', 'Temporary'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'CMakeCache.txt'), '');
+  const now = Date.now() / 1000;
+  for (const exe of ['ka-hgis', 'ka_adds_tests']) {
+    fs.writeFileSync(path.join(dir, exe), '');
+    fs.utimesSync(path.join(dir, exe), now + exeOffset, now + exeOffset);
+  }
+  const lastLog = path.join(dir, 'Testing', 'Temporary', 'LastTest.log');
+  fs.writeFileSync(lastLog, log);
+  fs.utimesSync(lastLog, now + logOffset, now + logOffset);
+}
+
+function linuxChange(t, edit, options) {
+  const { repo, git } = repoWith(t);
+  edit(repo);
+  git('add', '-A');
+  linuxEvidence(repo, options);
+  return repo;
+}
+
+test('a Linux build in build-linux/ with a later passing ctest lets a src change through', (t) => {
+  assert.equal(ask(linuxChange(t, writeSrc('src/small.cpp', linesOf(10))), 'git commit -m "feat: 작은 파일"'), null);
+});
+
+test('a Linux executable older than the changed file blocks the commit', (t) => {
+  const reason = ask(linuxChange(t, writeSrc('src/small.cpp', linesOf(10)), { exeOffset: -600, logOffset: 120 }), 'git commit -m "feat: 작은 파일"');
+  assert.match(reason ?? '', /build-linux\/ka-hgis/);
+});
+
+test('a failed ctest in build-linux/ blocks the commit', (t) => {
+  const reason = ask(linuxChange(t, writeSrc('src/small.cpp', linesOf(10)), { log: '1/1 Test: adds\nTest Failed.\nEnd testing: now\n' }), 'git commit -m "feat: 작은 파일"');
+  assert.match(reason ?? '', /adds/);
+});
+
+test('without any build directory the Linux first-build command is named too', (t) => {
+  const { repo, git } = repoWith(t);
+  writeSrc('src/small.cpp', linesOf(10))(repo);
+  git('add', '-A');
+  assert.match(ask(repo, 'git commit -m "feat: 작은 파일"') ?? '', /cmake --preset linux/);
+});

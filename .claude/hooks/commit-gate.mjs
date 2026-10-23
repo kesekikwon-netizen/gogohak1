@@ -15,6 +15,9 @@
 //       least one test, and every listed test passed (no baseline failures are
 //       excused since 2026-10-03: the former four pass locally and in CI).
 // No build/ at all -> deny with the first-build command.
+// Linux (2026-10-23): when build/Release does not exist, the same rule is applied to build-linux/ (ka-hgis
+// and ka_*_tests without .exe next to build-linux/Testing/Temporary/LastTest.log). A commit that touches
+// Windows-only code still needs the Windows CI run, which this hook cannot see.
 //
 // Line limit, for every commit (docs-only too): a C++ file under src/ or tests/ in the commit may
 // pass 300 lines only when docs/quality/line-limit-baseline.txt lists it, and not past the listed
@@ -70,6 +73,10 @@ const CMD_BUILD =
 const CMD_BUILD_LOWMEM = '(C1060/MSB4018/MSB4166/0x800705AF 메모리 오류면 타깃 뒤에 `-- /m:1 /p:CL_MPCount=2` 를 붙여 다시 실행)';
 const CMD_TEST =
   'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \'. ./scripts/dev-env.ps1; $ErrorActionPreference="Continue"; ctest --test-dir build -C Release -j4 --output-on-failure -R "^(name1|name2)$"; exit $LASTEXITCODE\'';
+
+const CMD_FIRST_BUILD_LINUX = 'cmake --preset linux && cmake --build build-linux --parallel --target ka-hgis';
+const CMD_BUILD_LINUX = 'cmake --build build-linux --parallel --target ka-hgis <test-target>';
+const CMD_TEST_LINUX = 'ctest --test-dir build-linux -j4 --output-on-failure -R "^(name1|name2)$"';
 
 // git subcommands that are not commits: no alias lookup needed for them.
 const GIT_BUILTINS = new Set([
@@ -820,26 +827,41 @@ function evaluate(top, form, files) {
   const relevant = files.filter(isBuildRelevant);
   if (!relevant.length) return { gated: false, files };
 
-  const buildDir = path.join(top, 'build');
-  const release = path.join(buildDir, 'Release');
-  if (!fs.existsSync(path.join(buildDir, 'CMakeCache.txt')) || !fs.existsSync(release)) {
-    return { gated: true, files: relevant, problems: [`build/ 가 없다 (${buildDir}). 첫 빌드 (약 8분):\n    ${CMD_FIRST_BUILD}`] };
+  const winDir = path.join(top, 'build');
+  const linuxDir = path.join(top, 'build-linux');
+  const useWindows = fs.existsSync(path.join(winDir, 'CMakeCache.txt')) && fs.existsSync(path.join(winDir, 'Release'));
+  const useLinux = !useWindows && fs.existsSync(path.join(linuxDir, 'CMakeCache.txt'));
+  if (!useWindows && !useLinux) {
+    return {
+      gated: true,
+      files: relevant,
+      problems: [`build/ 가 없다 (${winDir}). 첫 빌드 (Windows 약 8분):\n    ${CMD_FIRST_BUILD}\n  리눅스는 build-linux/:\n    ${CMD_FIRST_BUILD_LINUX}`],
+    };
   }
+  const buildDir = useLinux ? linuxDir : winDir;
+  const release = useLinux ? linuxDir : path.join(winDir, 'Release');
+  const label = useLinux ? 'build-linux' : 'build';
+  const appName = useLinux ? 'ka-hgis' : 'ka-hgis.exe';
+  const appLabel = useLinux ? 'build-linux/ka-hgis' : 'build/Release/ka-hgis.exe';
+  const isExe = useLinux ? (f) => /^ka(?:-hgis|_.*_tests)$/.test(f) : (f) => /\.exe$/i.test(f);
+  const isTestExe = useLinux ? (f) => /^ka_.*_tests$/.test(f) : (f) => /^ka_.*_tests\.exe$/i.test(f);
+  const buildHint = useLinux ? `    ${CMD_BUILD_LINUX}` : `    ${CMD_BUILD}\n    ${CMD_BUILD_LOWMEM}`;
+  const cmdTest = useLinux ? CMD_TEST_LINUX : CMD_TEST;
 
   // (1) build output newer than every changed build-relevant file
-  const appMs = statMs(path.join(release, 'ka-hgis.exe'));
+  const appMs = statMs(path.join(release, appName));
   let exes = [];
   try {
     exes = fs
       .readdirSync(release)
-      .filter((f) => /\.exe$/i.test(f))
+      .filter(isExe)
       .map((f) => ({ name: f, ms: statMs(path.join(release, f)) }))
       .filter((e) => e.ms !== null);
   } catch {}
   const newestExe = newest(exes);
-  const newestTestExe = newest(exes.filter((e) => /^ka_.*_tests\.exe$/i.test(e.name)));
+  const newestTestExe = newest(exes.filter((e) => isTestExe(e.name)));
   if (!newestExe) {
-    return { gated: true, files: relevant, problems: [`build/Release 에 .exe 가 없다. 빌드:\n    ${CMD_BUILD}\n    ${CMD_BUILD_LOWMEM}`] };
+    return { gated: true, files: relevant, problems: [`${useLinux ? 'build-linux 에 ka-hgis 가' : 'build/Release 에 .exe 가'} 없다. 빌드:\n${buildHint}`] };
   }
 
   let newestChangedMs = 0;
@@ -857,14 +879,14 @@ function evaluate(top, form, files) {
       continue;
     }
     if (appMs === null || appMs <= ms) {
-      stale.push(`${rel} (${fmt(ms)}) 가 build/Release/ka-hgis.exe (${fmt(appMs)}) 보다 새롭다`);
+      stale.push(`${rel} (${fmt(ms)}) 가 ${appLabel} (${fmt(appMs)}) 보다 새롭다`);
       continue;
     }
     if (p.startsWith('data/')) {
       const copy = path.join(release, p);
       if (fs.existsSync(copy)) {
         try {
-          if (!fs.readFileSync(abs).equals(fs.readFileSync(copy))) stale.push(`${rel} 의 내용이 build/Release/${p} 와 다르다 (빌드가 아직 복사하지 않았다)`);
+          if (!fs.readFileSync(abs).equals(fs.readFileSync(copy))) stale.push(`${rel} 의 내용이 ${label}${useLinux ? '' : '/Release'}/${p} 와 다르다 (빌드가 아직 복사하지 않았다)`);
         } catch (e) {
           stale.push(`${rel}: 복사본 비교 실패 (${e.message})`);
         }
@@ -872,15 +894,15 @@ function evaluate(top, form, files) {
     }
   }
   if (stale.length) {
-    problems.push(`빌드 결과가 바뀐 파일보다 오래됐다:\n    - ${stale.join('\n    - ')}\n  빌드:\n    ${CMD_BUILD}\n    ${CMD_BUILD_LOWMEM}`);
+    problems.push(`빌드 결과가 바뀐 파일보다 오래됐다:\n    - ${stale.join('\n    - ')}\n  빌드:\n${buildHint}`);
   }
 
   // (2) ctest after the build, at least one test, all passed
   const lastLog = path.join(buildDir, 'Testing', 'Temporary', 'LastTest.log');
   const logMs = statMs(lastLog);
-  const testHint = `  테스트 (바꾼 영역의 그룹은 docs/testing-map.md):\n    ${CMD_TEST}`;
+  const testHint = `  테스트 (바꾼 영역의 그룹은 docs/testing-map.md):\n    ${cmdTest}`;
   if (logMs === null) {
-    problems.push(`ctest 기록이 없다 (build/Testing/Temporary/LastTest.log).\n${testHint}`);
+    problems.push(`ctest 기록이 없다 (${label}/Testing/Temporary/LastTest.log).\n${testHint}`);
   } else if (logMs <= newestExe.ms) {
     problems.push(`마지막 ctest (${fmt(logMs)}) 가 최신 빌드 ${newestExe.name} (${fmt(newestExe.ms)}) 보다 먼저 돌았다. 빌드 뒤에 다시 테스트:\n${testHint}`);
   } else if (logMs <= newestChangedMs) {
@@ -900,7 +922,7 @@ function evaluate(top, form, files) {
       const real = parsed.tests.filter((t) => t.result !== 'passed').map((t) => `${t.name} (${t.result})`);
       if (real.length) {
         problems.push(
-          `마지막 ctest 에서 실패한 테스트가 있다:\n    - ${real.join('\n    - ')}\n  먼저 고치고, 빌드와 테스트를 다시 통과시킨 뒤 커밋한다. 결과: build/test-logs/<name>.txt\n${testHint}`,
+          `마지막 ctest 에서 실패한 테스트가 있다:\n    - ${real.join('\n    - ')}\n  먼저 고치고, 빌드와 테스트를 다시 통과시킨 뒤 커밋한다. 결과: ${label}/test-logs/<name>.txt\n${testHint}`,
         );
       }
     }
