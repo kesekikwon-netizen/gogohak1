@@ -430,8 +430,10 @@ endif()
 if (MSVC)
   target_compile_options(ka_core PRIVATE /openmp /utf-8)
 endif()
+# OpenHwpSDK 소스를 ka_core 에 직접 컴파일해 넣으므로 정적으로 쓴다(없으면 MSVC 가 hwpsdk.lib 를 찾는다, CI 2026-10-23).
 target_compile_definitions(ka_core PUBLIC
   KA_HGIS_HAS_QGIS=1
+  HWPSDK_STATIC
   ${KA_EXPORT_DEFS}
   "KA_HGIS_VERSION=\"${PROJECT_VERSION}\"")
 

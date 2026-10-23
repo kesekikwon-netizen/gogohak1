@@ -11,7 +11,9 @@
 #		define SDK_FE_API
 #	endif	// defined(_MSC_VER)
 #else	// defined(HWPSDKCPP_EXPORTS)
-#	if defined(_MSC_VER)
+#	if defined(HWPSDK_STATIC)
+#		define SDK_FE_API
+#	elif defined(_MSC_VER)
 #		define SDK_FE_API				__declspec(dllimport)
 #		pragma comment(lib, "hwpsdk.lib")
 #	else
