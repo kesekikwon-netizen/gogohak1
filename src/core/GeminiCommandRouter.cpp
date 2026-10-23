@@ -91,7 +91,7 @@ ParsedCommand parse(const QString& userInput, int defaultRadiusMeters) {
   }
   if (hasAny(t, {u"시굴격자", u"트렌치 격자", u"격자 놓"}))
     return setCmd(Intent::PlaceTrenchGrid, "generate_trench_grid");
-  if (hasAny(t, {u"도면", u"조판"})) return setCmd(Intent::OpenLayout, "");
+  if (hasAny(t, {u"도면"})) return setCmd(Intent::OpenLayout, "");
   if (hasAny(t, {u"검수", u"제출 꾸러미"})) return setCmd(Intent::OpenSubmitReview, "run_checklist");
   if (hasAny(t, {u"워드크래프트", u"wordcraft", u"docx"})) return setCmd(Intent::ExportWordCraft, "");
   return setCmd(Intent::ResearchAndEvaluate, "collect_nearby_sites", true);

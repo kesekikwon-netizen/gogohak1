@@ -16,7 +16,7 @@ void KaHwpReportStudio::updateStepRail(int activeStep) {
   const QStringList steps = {
       QStringLiteral("1. 근거 확정 (GIS 최단거리·방위)"), QStringLiteral("2. 보고서 원문 대조 (RAG)"),
       QStringLiteral("3. 학술문헌 수렴 (DBpia)"),         QStringLiteral("4. 사실·인용 교차검증 (G·R·L)"),
-      QStringLiteral("5. 본문·각주·연관성 집필"),         QStringLiteral("6. 층위 대비도·비교표 조판")};
+      QStringLiteral("5. 본문·각주·연관성 집필"),         QStringLiteral("6. 층위 대비도·비교표 작성")};
   for (int i = 0; i < steps.size(); ++i)
     m_stepList->addItem(((i + 1 < activeStep) ? QStringLiteral("✓ ")
                                               : ((i + 1 == activeStep) ? QStringLiteral("• ") : QStringLiteral("○ "))) +

@@ -113,7 +113,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   saveMenu->addAction(QStringLiteral("한글 5.0(.hwp) 저장…"), this, &KaHwpReportStudio::onSaveHwp5Clicked);
   saveMenu->addSeparator();
   saveMenu->addAction(QStringLiteral("기관 한글 양식(.hwpx/.hwp) 열기…"), this, &KaHwpReportStudio::onOpenTemplateClicked);
-  saveMenu->addAction(QStringLiteral("별도 조판 창으로 보기…"), this, &KaHwpReportStudio::openLivePaperWindow);
+  saveMenu->addAction(QStringLiteral("별도 창으로 보기…"), this, &KaHwpReportStudio::openLivePaperWindow);
   btnSaveMenu->setMenu(saveMenu);
 
   for (QWidget* w : {static_cast<QWidget*>(btnDocReport), static_cast<QWidget*>(btnDocThesis),
@@ -212,7 +212,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
                                 QStringLiteral("3/6단계: 학술문헌 서지 확인"),
                                 QStringLiteral("4/6단계: 사실·인용 교차검증"),
                                 QStringLiteral("5/6단계: Ⅱ장 유적별 현황·연관성 집필"),
-                                QStringLiteral("6/6단계: 층위 대비도·유구 비교표 조판 완료")};
+                                QStringLiteral("6/6단계: 층위 대비도·유구 비교표 작성 완료")};
     if (m_currentStage >= 6) m_stageTimer->stop();
     syncUiFromSession(m_currentStage >= 6 ? QString() : labels.value(m_currentStage), qMin(100, m_currentStage * 17));
   });
@@ -247,7 +247,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
     HwpAcademicVisuals::appendDbpiaAndVisualSummaryToDoc(m_cachedSnap, m_dbpiaSummary, m_session.get());
     updateStepRail(6);
     appendChatMessage(QStringLiteral("검증 완료"), totalUnique > 0
-        ? QStringLiteral("학술문헌 %1편 및 층위 대비도·유구 비교표 조판 완료").arg(totalUnique)
+        ? QStringLiteral("학술문헌 %1편 및 층위 대비도·유구 비교표 작성 완료").arg(totalUnique)
         : QStringLiteral("DBpia 수집 문헌 없음(Antigravity SDK/DBpia 응답 없음) — 문헌 표를 임의로 채우지 않았습니다."));
     syncUiFromSession(QString(), 100);
   });

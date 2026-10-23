@@ -4,7 +4,7 @@
 
 KaHwpLivePaperWindow::KaHwpLivePaperWindow(QWidget* parent)
     : QDialog(parent, Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint) {
-  setWindowTitle(QStringLiteral("Strata · 한글(HWPX / HWP) A4 조판 창"));
+  setWindowTitle(QStringLiteral("Strata · 한글(HWPX / HWP) A4 미리보기 창"));
   resize(920, 960);
 
   auto* root = new QVBoxLayout(this);
@@ -12,7 +12,7 @@ KaHwpLivePaperWindow::KaHwpLivePaperWindow(QWidget* parent)
   root->setSpacing(8);
 
   auto* topBar = new QHBoxLayout();
-  m_statusLabel = new QLabel(QStringLiteral("한글(HWPX/HWP) A4 조판 준비됨"), this);
+  m_statusLabel = new QLabel(QStringLiteral("한글(HWPX/HWP) A4 미리보기 준비됨"), this);
   m_progressBar = new QProgressBar(this);
   m_progressBar->setRange(0, 100);
   m_progressBar->setValue(100);
