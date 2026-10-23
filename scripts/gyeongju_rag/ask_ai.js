@@ -15,7 +15,7 @@ const path = require('path');
 const puppeteer = require('puppeteer-core');
 
 const OUT_DIR = process.env.GY_RAG_DIR || '/mnt/data-drawing/gyeongju_rag';
-const PROFILE = path.join(OUT_DIR, 'chrome-profile');
+const PROFILE = process.env.GYEONGJU_PROFILE || path.join(OUT_DIR, 'chrome-profile');
 const ANSWERS = path.join(OUT_DIR, 'ai_answers.jsonl');
 const STATE = path.join(OUT_DIR, 'ai_state.json');
 const AI_URL = 'https://ai.dbpia.co.kr/ko/search';
@@ -26,6 +26,10 @@ const log = (...a) => {
   console.log(kst, ...a);
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// 대화창(컨텍스트)이 가득 찼다는 DBpia 안내. 월 한도(QUOTA)와 달리
+// 새 대화로 교체하면 같은 질문을 계속 물을 수 있다.
+const WINDOW_FULL_RE = /대화\s*(내용|창|횟수|길이|분량|기록).{0,10}(초과|제한|길어|많아|가득|찼)|새\s*대화.{0,20}(시작|열|만들|필요)|대화.{0,10}새로|창이?\s*(가득|모자라|부족|초과)|더\s*이상.{0,10}(질문|대화|답변)/;
 
 function state(extra = {}) {
   let cur = {};
@@ -47,6 +51,13 @@ async function launch(headless) {
     args: ['--no-sandbox', '--disable-gpu', '--lang=ko-KR', '--window-size=1600,1000'],
     defaultViewport: { width: 1600, height: 1000 },
   });
+}
+
+// 붙어서 쓴 브라우저는 끊기만 한다. close()를 부르면 사용자가 띄운 창이 꺼져
+// 다음 실행이 9222 연결 거부로 죽는다.
+async function release(browser) {
+  if (process.env.GYEONGJU_ATTACH) await browser.disconnect();
+  else await browser.close();
 }
 
 async function memberInfo(page) {
@@ -90,14 +101,14 @@ async function login() {
       if (info && info.b2cId) {
         log('로그인 확인:', info.b2cName || info.b2cId, 'AI등급:', info.b2cAiTier || '-');
         state({ loggedIn: true, b2cId: info.b2cId, b2cName: info.b2cName || '' });
-        await browser.close();
+        await release(browser);
         return 0;
       }
     } catch (e) {}
     if (i % 12 === 11) log('아직 로그인 전입니다... (로그인 창을 닫지 마세요)');
   }
   log('시간 초과. 로그인하지 못했습니다.');
-  await browser.close();
+  await release(browser);
   return 2;
 }
 
@@ -110,7 +121,7 @@ async function check() {
   const ok = !!(info && info.b2cId);
   log(ok ? `로그인됨: ${info.b2cName || info.b2cId}` : '로그인 안 됨');
   state({ loggedIn: ok, b2cId: info.b2cId || '', b2cName: info.b2cName || '' });
-  await browser.close();
+  await release(browser);
   return ok ? 0 : 2;
 }
 
@@ -210,6 +221,8 @@ async function askOne(page, question) {
       const body = await page.evaluate(() => document.body.innerText);
       if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달|로그인하세요/.test(body) && !isNew)
         throw new Error('QUOTA');
+      if (WINDOW_FULL_RE.test(body) && !isNew)
+        throw new Error('WINDOW_FULL');
     }
     throw new Error('TIMEOUT');
   }
@@ -233,6 +246,8 @@ async function askOne(page, question) {
       return { answer: delta, links: now.links, conversationId: '' };
     if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달|로그인하세요/.test(delta) && stable >= 2)
       throw new Error('QUOTA');
+    if (WINDOW_FULL_RE.test(delta) && stable >= 2)
+      throw new Error('WINDOW_FULL');
   }
   throw new Error('TIMEOUT');
 }
@@ -249,9 +264,9 @@ async function runQuestions(file) {
   const todo = questions.filter((q) => !done.has(q));
   log(`질문 ${questions.length}건 중 남은 ${todo.length}건`);
 
-  const attached = !!process.env.GYEONGJU_ATTACH;
-  // 기본은 하나의 창(하나의 대화)에서 끝까지. 창을 나누고 싶을 때만 GYEONGJU_BATCH=10 처럼 지정.
-  const batchSize = parseInt(process.env.GYEONGJU_BATCH || '1000000', 10) || 1000000;
+  // 대화창이 가득 차면 DBpia가 멈춘다. 8문항마다 새 대화로 교체해 미리 피한다.
+  // 더 길게 가고 싶을 때만 GYEONGJU_BATCH=20 처럼 지정.
+  const batchSize = parseInt(process.env.GYEONGJU_BATCH || '8', 10) || 8;
   const browser = await launch('new');
 
   async function newAskPage() {
@@ -266,12 +281,23 @@ async function runQuestions(file) {
   const info = await memberInfo(page);
   if (!info || !info.b2cId) {
     log('로그인이 필요합니다: node scripts/gyeongju_rag/ask_ai.js --login');
-    if (attached) await browser.disconnect(); else await browser.close();
+    await release(browser);
     return 2;
   }
   log('로그인:', info.b2cName || info.b2cId, `· 창당 ${batchSize}문항`);
 
   let n = 0, inBatch = 0;
+  const saveAnswer = (q, r) => {
+    const rec = {
+      question: q, answer: r.answer, links: r.links,
+      conversationId: r.conversationId || '',
+      b2cId: info.b2cId, askedAt: new Date().toISOString(),
+    };
+    fs.appendFileSync(ANSWERS, JSON.stringify(rec) + '\n');
+    n++;
+    inBatch++;
+    log(`  답변 ${r.answer.length}자, 인용링크 ${r.links.length}건`);
+  };
   for (const q of todo) {
     if (inBatch >= batchSize) {
       try { await page.close(); } catch (e) {}
@@ -282,35 +308,53 @@ async function runQuestions(file) {
     try {
       log(`질문: ${q}`);
       const r = await askOne(page, q);
-      const rec = {
-        question: q, answer: r.answer, links: r.links,
-        conversationId: r.conversationId || '',
-        b2cId: info.b2cId, askedAt: new Date().toISOString(),
-      };
-      fs.appendFileSync(ANSWERS, JSON.stringify(rec) + '\n');
-      n++;
-      inBatch++;
-      log(`  답변 ${r.answer.length}자, 인용링크 ${r.links.length}건`);
+      saveAnswer(q, r);
       await sleep(2500);
     } catch (e) {
       if (String(e.message) === 'QUOTA') {
         log('DBpia AI 이용 한도에 도달했습니다. 다음 달/기관인증 후 이어서 실행하십시오.');
         break;
       }
+      if (String(e.message) === 'WINDOW_FULL') {
+        // 대화창이 가득 찼다: 새 대화로 교체하고 같은 질문을 버리지 않고 다시 시도한다.
+        log('  대화창 가득 참: 새 대화로 교체하고 같은 질문을 다시 시도한다.');
+        try { await page.close(); } catch (_) {}
+        page = await newAskPage();
+        inBatch = 0;
+        try {
+          const r2 = await askOne(page, q);
+          saveAnswer(q, r2);
+          await sleep(2500);
+          continue;
+        } catch (e2) {
+          if (String(e2.message) === 'QUOTA') {
+            log('DBpia AI 이용 한도에 도달했습니다. 다음 달/기관인증 후 이어서 실행하십시오.');
+            break;
+          }
+          log('  재시도 실패:', e2.message, '(다음 질문으로 넘어간다)');
+        }
+      }
       // 같은 창을 유지한다. 탭이 죽은 경우에만 같은 창 안에 새 탭을 연다.
       log('  실패:', e.message, '(같은 창에서 계속)');
       try {
+        if (page.isClosed()) throw new Error('TAB_CLOSED');
         await page.goto(AI_URL, { waitUntil: 'networkidle2', timeout: 60000 });
         await sleep(3000);
         await dismissIntro(page);
-      } catch (e2) {}
+        // 복구 goto 후에도 프레임이 죽어 있으면 새 탭으로 교체한다.
+        await page.evaluate(() => document.readyState);
+      } catch (e2) {
+        try { await page.close(); } catch (_) {}
+        page = await newAskPage();
+        log('  탭 교체: 같은 창에 새 탭을 열었다.');
+      }
       inBatch = 0;
       await sleep(3000);
     }
   }
   try { await page.close(); } catch (e) {}
   state({ answered: n, lastRunQuestions: todo.length });
-  if (attached) await browser.disconnect(); else await browser.close();
+  await release(browser);
   log(`저장: ${ANSWERS} (${n}건 추가)`);
   return 0;
 }

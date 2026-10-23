@@ -6,15 +6,21 @@
 - 로그인 쿠키: `chrome-dbpia/`에 복사됨 (DBpia PREMIUM, ~11/1 만료)
 - 남은 작업: 시굴지 34문항 중 진행 중 → 이후 site_loop 완성 회전
 
-## 재개 순서
-1. Chrome 원격디버깅 시작 (로그인 프로필 사용):
+## 재개 순서 (2026-10-23 16:55 KST 검증됨)
+
+1. Xvfb 가상 화면 + headed Chrome (로그인 프로필 사용):
    ```
-   google-chrome --remote-debugging-port=9222 \
+   Xvfb :99 -screen 0 1600x1000x24 &
+   DISPLAY=:99 google-chrome --remote-debugging-port=9222 \
      --user-data-dir=/mnt/data-drawing/gyeongju_rag/chrome-dbpia \
      --no-first-run --no-default-browser-check \
+     --disable-dev-shm-usage --disable-gpu --window-size=1600,1000 \
      https://ai.dbpia.co.kr/ko/search
    ```
-   DBpia 로그인이 풀렸으면 한 번만 로그인한다.
+   주의:
+   - 실제 화면(:0)의 headed 크롬은 GPU 문제로 수십 초 만에 죽는다. 반드시 Xvfb(:99) 위에서 띄운다.
+   - `--headless=new`는 살지만 DBpia가 세션을 로그인으로 인정하지 않는다(UA·힌트 위장해도 안 됨). headless로 수집하지 않는다.
+   - `ask_ai.js --check/--questions/--login`은 붙은 브라우저를 닫지 않고 끊기만 한다(release). 구버전은 close()로 창을 꺼버려 다음 실행이 9222 연결 거부로 죽었다.
 2. 수집 재개 (단일 창):
    ```
    cd /tmp/opencode/dbpia 2>/dev/null || mkdir -p /tmp/opencode/dbpia && cd /tmp/opencode/dbpia

@@ -60,6 +60,7 @@ def main() -> int:
     conn = store.connect(args.db)
     prev = snap(conn)
     still = 0
+    fail_streak = 0
     for rnd in range(1, args.rounds + 1):
         rep = gaps.analyze(Path(args.db))
         qs, mapping = gaps.gap_questions(rep, args.per_round)
@@ -76,7 +77,15 @@ def main() -> int:
         qf.write_text("\n".join(qs) + "\n", encoding="utf-8")
         (OUT_DIR / "gap_question_map.json").write_text(
             json.dumps(mapping, ensure_ascii=False, indent=1), encoding="utf-8")
-        run_asker(qf)
+        ok = run_asker(qf)
+        if not ok:
+            fail_streak += 1
+            log(f"[R{rnd}] asker 실패 {fail_streak}회 연속 — 브라우저(:9222) 확인 필요")
+            if fail_streak >= 3:
+                log("asker 3회 연속 실패 — 수집 중단 (브라우저를 살린 뒤 재실행)")
+                break
+            continue
+        fail_streak = 0
         import_ai.import_file(OUT_DIR / "ai_answers.jsonl", Path(args.db))
         conn = store.connect(args.db)
         cur = snap(conn)

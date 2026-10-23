@@ -52,7 +52,7 @@ def import_file(path: Path, db: Path) -> dict:
         turn_id = store.add_ai_turn(conn, q, str(rec.get("answer") or ""),
                                     refs_from_links(rec.get("links") or []),
                                     model="dbpia-ai-deep" if q.startswith("[학술 심층]") else "dbpia-ai",
-                                    conversation_id=str(rec.get("b2cId") or ""))
+                                    conversation_id=str(rec.get("conversationId") or ""))
         if turn_id:
             conn.execute("DELETE FROM ai_fts WHERE rowid=?", (turn_id,))
             conn.execute("INSERT INTO ai_fts(rowid,question,answer) VALUES(?,?,?)",

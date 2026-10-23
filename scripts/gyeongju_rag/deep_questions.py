@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import seeds as _seeds  # noqa: E402
 
 OUT = Path("/mnt/data-drawing/gyeongju_rag/deep_questions.jsonl")
 
@@ -81,6 +85,9 @@ SITES = [
     "나산리 고분", "아화리 유적", "금장리 고분군", "신평동 유적", "성동동 유적",
 ]
 
+# 신라 9주(치소 중심). 5소경은 SOKYEONG에서 소경별로 다룬다.
+JUS = ["양주", "상주", "강주", "전주", "무주", "웅주", "한주", "삭주", "명주"]
+
 METHOD = [
     "경주 출토 신라 토기·와전·금속유물의 형식분류와 편년 체계를 정리하라.",
     "경주 유적의 고환경·고지형·화분·식물규소 분석 성과를 정리하라.",
@@ -107,6 +114,11 @@ def build() -> list[str]:
 
     for t in WANGKYEONG + SOKYEONG:
         add(t)
+    for j in JUS:
+        add(f"신라 {j}의 치소 위치 비정과 고고학적 조사 성과(성곽·관청·사찰·주거·분묘·출토유물·편년)를 정리하라. "
+            f"왕경·5소경과의 위계와 연결도 밝혀라.")
+    for h in _seeds.HERITAGE:
+        add(f"경주 {h}의 지정 경위·발굴조사 성과(연도·조사기관·보고서명·주요 유구·유물)·편년·보존정비·학술 쟁점을 정리하라.")
     for s in SITES:
         add(f"경주 {s}의 발굴조사 연도·조사기관·보고서명, 주요 유구·유물, 편년, 학술적 쟁점을 정리하라.")
     for t in METHOD:

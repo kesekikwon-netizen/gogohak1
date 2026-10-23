@@ -63,6 +63,14 @@ def analyze(db: Path) -> dict:
             site_rows.append({"site": s, "papers": p, "chunks": c})
     site_rows.sort(key=lambda r: (r["chunks"] > 0, r["papers"] > 0, r["papers"] + r["chunks"]))
 
+    heritage_rows = []
+    for h in seeds.HERITAGE:
+        p = fts_count(conn, "papers_fts", h)
+        c = fts_count(conn, "chunks_fts", h)
+        if p == 0 or c == 0:
+            heritage_rows.append({"site": h, "papers": p, "chunks": c})
+    heritage_rows.sort(key=lambda r: (r["chunks"] > 0, r["papers"] > 0, r["papers"] + r["chunks"]))
+
     conn.close()
     return {
         "papers": papers,
@@ -74,6 +82,7 @@ def analyze(db: Path) -> dict:
             for r in missing
         ],
         "site_gaps": site_rows,
+        "heritage_gaps": heritage_rows,
     }
 
 
@@ -101,6 +110,24 @@ def gap_questions(rep: dict, limit: int) -> tuple[list[str], dict[str, str]]:
                 f"발굴조사 보고서가 없어 논문 근거가 필요한 상태야.")
         elif g["papers"] == 0:
             add(f"경주 {s}의 발굴조사 성과를 논문·학술지 관점에서 정리해줘. "
+                f"보고서는 있지만 학술 논문 근거가 부족해.")
+        if len(qs) >= limit:
+            return qs, mapping
+
+    covered = {g["site"].replace(" ", "") for g in rep["site_gaps"]}
+    for g in rep.get("heritage_gaps", []):
+        # 같은 회전에서 유적각도로 이미 물은 문화유산은 건너뛴다(쿼터 절약).
+        if g["site"].replace(" ", "") in covered:
+            continue
+        h = g["site"]
+        if g["papers"] == 0 and g["chunks"] == 0:
+            add(f"경주 {h}의 지정 경위와 발굴조사·연구 성과를 연도·유구·유물 중심으로 정리해줘. "
+                f"보고서·논문 모두 부족한 상태야.")
+        elif g["chunks"] == 0:
+            add(f"경주 {h}의 지정 경위와 논문·학술지의 핵심 주장·쟁점을 정리해줘. "
+                f"발굴조사 보고서가 없어 논문 근거가 필요한 상태야.")
+        elif g["papers"] == 0:
+            add(f"경주 {h}의 발굴조사 성과(연도·조사기관·유구·유물·편년)를 정리해줘. "
                 f"보고서는 있지만 학술 논문 근거가 부족해.")
         if len(qs) >= limit:
             return qs, mapping
@@ -136,6 +163,7 @@ def main() -> int:
         "papers_without_abstract": rep["papers_without_abstract"],
         "chunks": rep["chunks"],
         "site_gaps": len(rep["site_gaps"]),
+        "heritage_gaps": len(rep.get("heritage_gaps", [])),
         "zero_hit_queries": len(rep["zero_hit_queries"]),
         "questions": len(qs),
     }, ensure_ascii=False, indent=2))
