@@ -253,7 +253,21 @@ def upsert_paper(conn, p: dict, query: str, sort: str) -> bool:
              p.get("journal", ""), " ".join(p.get("keywords") or [])),
         )
     else:
-        conn.execute("UPDATE papers SET last_seen=? WHERE node_id=?", (ts, node_id))
+        # 이미 있는 논문이라도 초록이 더 길게 오면 갱신한다(잘린 초록 복원용).
+        row = conn.execute("SELECT LENGTH(abstract) FROM papers WHERE node_id=?",
+                           (node_id,)).fetchone()
+        if row and len(p.get("abstract") or "") > (row[0] or 0):
+            conn.execute("UPDATE papers SET abstract=?, last_seen=? WHERE node_id=?",
+                         (p.get("abstract", ""), ts, node_id))
+            conn.execute("DELETE FROM papers_fts WHERE node_id=?", (node_id,))
+            conn.execute(
+                """INSERT INTO papers_fts(node_id,title,abstract,authors,journal,keywords)
+                   VALUES(?,?,?,?,?,?)""",
+                (node_id, title, p.get("abstract", ""), p.get("authors", ""),
+                 p.get("journal", ""), " ".join(p.get("keywords") or [])),
+            )
+        else:
+            conn.execute("UPDATE papers SET last_seen=? WHERE node_id=?", (ts, node_id))
     conn.execute(
         "INSERT OR IGNORE INTO paper_queries(node_id,q,sort) VALUES(?,?,?)",
         (node_id, query, sort),
