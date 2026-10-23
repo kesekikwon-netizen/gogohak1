@@ -27,6 +27,7 @@ ASK = Path(__file__).resolve().parent / "ask_ai.js"
 
 # gaps 수렴 뒤에 소진할 정적 풀(가치 순). done 집합으로 건너뛰므로 중복 질문 없음.
 POOLS = [
+    "nearby_questions.jsonl",
     "deep_questions.jsonl",
     "aspect_questions.jsonl",
     "cited_questions.jsonl",
@@ -48,15 +49,31 @@ def snap(conn) -> dict:
             ).fetchone()[0]}
 
 
-def run_asker(qlist: Path) -> bool:
+def run_asker(qlist: Path) -> int | None:
+    """ask_ai.js 실행. 반환: 0 성공, 2 로그인 만료, 1 기타 실패, None 실행 오류."""
     env = dict(os.environ, GYEONGJU_ATTACH="http://127.0.0.1:9222",
                NODE_PATH="/tmp/opencode/dbpia/node_modules")
     try:
         r = subprocess.run(["node", str(ASK), "--questions", str(qlist)],
                            env=env, timeout=12 * 3600)
-        return r.returncode == 0
+        return r.returncode
     except Exception as e:
         log(f"asker 오류: {e}")
+        return None
+
+
+def login_ok() -> bool:
+    """수집 전 로그인 확인. 만료면 라운드를 돌리지 않고 바로 알린다."""
+    env = dict(os.environ, GYEONGJU_ATTACH="http://127.0.0.1:9222",
+               NODE_PATH="/tmp/opencode/dbpia/node_modules")
+    try:
+        r = subprocess.run(["node", str(ASK), "--check"], env=env,
+                           timeout=120, capture_output=True, text=True)
+        last = (r.stdout or "").strip().splitlines()
+        log("로그인 확인: " + (last[-1] if last else f"exit={r.returncode}"))
+        return r.returncode == 0
+    except Exception as e:
+        log(f"로그인 확인 실패: {e}")
         return False
 
 
@@ -78,7 +95,11 @@ def drain_pools(db: str, per_round: int) -> int:
             qf = OUT_DIR / "pool_batch.jsonl"
             qf.write_text("\n".join(batch) + "\n", encoding="utf-8")
             log(f"[pool:{name}] {i + len(batch)}/{len(qs)} 질문")
-            if not run_asker(qf):
+            code = run_asker(qf)
+            if code == 2:
+                log("DBpia 로그인 만료 — RESUME.md 재로그인 절차로 로그인 후 --pools-only로 재개")
+                return total
+            if code != 0:
                 log("asker 실패 — 풀 소진 중단 (브라우저를 살린 뒤 --pools-only로 재개)")
                 return total
             import_ai.import_file(OUT_DIR / "ai_answers.jsonl", Path(db))
@@ -104,10 +125,21 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.pools_only:
+        if not login_ok():
+            print(json.dumps({"error": "login_required",
+                              "hint": "RESUME.md 재로그인 절차로 로그인 후 재개"},
+                             ensure_ascii=False))
+            return 2
         n = drain_pools(args.db, args.per_round)
         print(json.dumps({"pooled": n, **snap(store.connect(args.db))},
                          ensure_ascii=False, indent=2))
         return 0
+
+    if not login_ok():
+        print(json.dumps({"error": "login_required",
+                          "hint": "RESUME.md 재로그인 절차로 로그인 후 재개"},
+                         ensure_ascii=False))
+        return 2
 
     conn = store.connect(args.db)
     prev = snap(conn)
@@ -130,7 +162,10 @@ def main() -> int:
         (OUT_DIR / "gap_question_map.json").write_text(
             json.dumps(mapping, ensure_ascii=False, indent=1), encoding="utf-8")
         ok = run_asker(qf)
-        if not ok:
+        if ok == 2:
+            log(f"[R{rnd}] DBpia 로그인 만료 — RESUME.md 재로그인 절차로 로그인 후 재실행")
+            break
+        if ok != 0:
             fail_streak += 1
             log(f"[R{rnd}] asker 실패 {fail_streak}회 연속 — 브라우저(:9222) 확인 필요")
             if fail_streak >= 3:

@@ -54,6 +54,18 @@ def analyze(db: Path) -> dict:
                          THEN 0 ELSE 1 END,
                     CASE WHEN year='' THEN 1 ELSE 0 END, year DESC LIMIT 5000"""
     ).fetchall()
+    # 조사구역 인접(제목에 인접 키워드)을 학술지 등급 안에서 앞으로 당긴다.
+    # 안정 정렬이라 학술지·연도 순서는 유지된다.
+    try:
+        from pool_questions import NEARBY_KEYS
+    except ImportError:
+        NEARBY_KEYS = []
+    _CORE = {'신라문화', '신라사학보', '신라문물연구', '경주사학',
+             '한국고고학보', '야외고고학', '고고학', '보존과학회지', '문화재'}
+    missing = sorted(
+        missing,
+        key=lambda r: (0 if r[3] in _CORE else 1,
+                       -sum(1 for k in NEARBY_KEYS if k and k in (r[1] or ""))))
 
     site_rows = []
     for s in seeds.SITES:
@@ -139,8 +151,10 @@ def gap_questions(rep: dict, limit: int) -> tuple[list[str], dict[str, str]]:
 
     for p in rep.get("missing_abstracts", []):
         title = p["title"]
-        add(f"「{title}」({p['authors']}, {p['journal']}, {p['year']}) 논문의 핵심 내용"
-            f"(연구 목적·방법·결론)과 경주 고고학적 의의를 5문장 이내로 요약해줘.", p["node_id"])
+        add(f"「{title}」({p['authors']}, {p['journal']}, {p['year']}) 논문을 상세히 정리해줘: "
+            f"(1) 연구 목적·문제의식, (2) 자료·방법, (3) 핵심 주장·결론, "
+            f"(4) 경주 고고학적 의의. 각 항목을 구체적 근거와 함께 3문장 이상으로 써라.",
+            p["node_id"])
         if len(qs) >= limit:
             break
     return qs, mapping

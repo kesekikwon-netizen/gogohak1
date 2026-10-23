@@ -11,6 +11,7 @@
 // 스스로 멈추고 ai_answers.jsonl에 그때까지의 답변을 남긴다.
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const puppeteer = require('puppeteer-core');
 
@@ -53,11 +54,90 @@ async function launch(headless) {
   });
 }
 
+// 자동 로그인용 인증 파일. 저장소 밖, 600 권한.
+// 형식: {"id":"...","pw":"..."} — 값은 절대 로그에 남기지 않는다.
+const AUTH_FILE = process.env.GYEONGJU_AUTH_FILE ||
+  path.join(os.homedir(), '.config', 'ka-hgis', 'dbpia-auth.json');
+
+function loadAuth() {
+  try {
+    const st = fs.statSync(AUTH_FILE);
+    if (st.mode & 0o077) log('  경고: 인증 파일 권한이 600이 아니다:', AUTH_FILE);
+    const j = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+    if (j.id && j.pw) return j;
+  } catch (e) {}
+  return null;
+}
+
+async function autoLogin(page) {
+  const auth = loadAuth();
+  if (!auth) {
+    log('자동 로그인 불가: 인증 파일이 없다. ' + AUTH_FILE +
+        ' 에 {"id":"...","pw":"..."} 저장 후 chmod 600');
+    return false;
+  }
+  log('자동 로그인 시도 (파일 사용, 값은 기록하지 않음)');
+  try {
+    await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await sleep(2500);
+    if (!(await page.$('#b2c_loginId')) || !(await page.$('#b2c_loginPassword'))) {
+      log('자동 로그인 실패: 입력창을 찾지 못했다.');
+      return false;
+    }
+    await page.click('#b2c_loginId', { clickCount: 3 });
+    await page.keyboard.press('Backspace');
+    await page.type('#b2c_loginId', String(auth.id), { delay: 20 });
+    await page.click('#b2c_loginPassword', { clickCount: 3 });
+    await page.keyboard.press('Backspace');
+    await page.type('#b2c_loginPassword', String(auth.pw), { delay: 20 });
+    try {
+      const auto = await page.$('#pub_check_autoLogin');
+      if (auto && !(await page.evaluate((e) => e.checked, auto))) await auto.click();
+    } catch (e) {}
+    const clicked = await page.evaluate(() => {
+      const b = Array.from(document.querySelectorAll('button, input[type=submit], a'))
+        .find((x) => ((x.innerText || x.value) || '').trim() === '로그인');
+      if (b) { b.click(); return true; }
+      return false;
+    });
+    if (!clicked) {
+      log('자동 로그인 실패: 로그인 단추를 찾지 못했다.');
+      return false;
+    }
+    await sleep(6000);
+    const info = await memberInfo(page);
+    if (info && info.b2cId) {
+      log('자동 로그인 성공:', info.b2cName || info.b2cId);
+      state({ loggedIn: true, b2cId: info.b2cId, b2cName: info.b2cName || '' });
+      return true;
+    }
+  } catch (e) {
+    log('자동 로그인 오류:', e.message);
+  }
+  log('자동 로그인 실패(캡차·비밀번호 변경 가능). 직접 로그인 후 재개하라.');
+  return false;
+}
+
 // 붙어서 쓴 브라우저는 끊기만 한다. close()를 부르면 사용자가 띄운 창이 꺼져
 // 다음 실행이 9222 연결 거부로 죽는다.
 async function release(browser) {
   if (process.env.GYEONGJU_ATTACH) await browser.disconnect();
   else await browser.close();
+}
+
+async function loginAuto() {
+  // 수집 크롬(프로필 공유)에 붙어서 자동 로그인한다.
+  // headless 로그인은 DBpia가 인정하지 않으므로 반드시 headed 수집 크롬을 먼저 띄운다.
+  if (!process.env.GYEONGJU_ATTACH) {
+    log('수집 크롬을 먼저 띄워라: chrome_headed.sh start');
+    return 2;
+  }
+  const browser = await launch('new');
+  const page = await browser.newPage();
+  const ok = await autoLogin(page);
+  try { await page.close(); } catch (e) {}
+  await release(browser);
+  return ok ? 0 : 2;
 }
 
 async function memberInfo(page) {
@@ -219,7 +299,9 @@ async function askOne(page, question) {
         return { answer: content, links: fresh.length ? fresh : links, conversationId: id };
       }
       const body = await page.evaluate(() => document.body.innerText);
-      if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달|로그인하세요/.test(body) && !isNew)
+      if (/로그인하세요|로그인이 필요|다시 로그인/.test(body) && !isNew)
+        throw new Error('LOGIN_LOST');
+      if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달/.test(body) && !isNew)
         throw new Error('QUOTA');
       if (WINDOW_FULL_RE.test(body) && !isNew)
         throw new Error('WINDOW_FULL');
@@ -244,7 +326,9 @@ async function askOne(page, question) {
     const loading = /답변을 생성하고 있습니다|파일을 불러오고 있습니다|잠시만 기다려주세요|논문을 확인하고 있습니다|검색중/.test(delta);
     if (stable >= 3 && !loading && delta.length > 200 && now.text.length > baseLen + 200)
       return { answer: delta, links: now.links, conversationId: '' };
-    if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달|로그인하세요/.test(delta) && stable >= 2)
+    if (/로그인하세요|로그인이 필요|다시 로그인/.test(delta) && stable >= 2)
+      throw new Error('LOGIN_LOST');
+    if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달/.test(delta) && stable >= 2)
       throw new Error('QUOTA');
     if (WINDOW_FULL_RE.test(delta) && stable >= 2)
       throw new Error('WINDOW_FULL');
@@ -280,13 +364,13 @@ async function runQuestions(file) {
   let page = await newAskPage();
   const info = await memberInfo(page);
   if (!info || !info.b2cId) {
-    log('로그인이 필요합니다: node scripts/gyeongju_rag/ask_ai.js --login');
+    log('로그인이 필요하다: --login(직접) 또는 --login-auto(인증파일)');
     await release(browser);
     return 2;
   }
   log('로그인:', info.b2cName || info.b2cId, `· 창당 ${batchSize}문항`);
 
-  let n = 0, inBatch = 0;
+  let n = 0, inBatch = 0, loginDead = false;
   const saveAnswer = (q, r) => {
     const rec = {
       question: q, answer: r.answer, links: r.links,
@@ -304,6 +388,21 @@ async function runQuestions(file) {
       page = await newAskPage();
       inBatch = 0;
       log(`  ── 새 창에서 계속 (${n}건 완료) ──`);
+      const bi = await memberInfo(page);
+      if (!bi || !bi.b2cId) {
+        log('  배치 교체 시점에 로그인이 풀려 있다. 자동 로그인을 시도한다.');
+        if (await autoLogin(page)) {
+          try { await page.close(); } catch (_) {}
+          page = await newAskPage();
+        } else {
+          loginDead = true;
+          log('  자동 로그인 실패. 직접 로그인 후 재개하십시오 (RESUME.md 재로그인 절차).');
+          try { await page.close(); } catch (_) {}
+          state({ answered: n, lastRunQuestions: todo.length });
+          await release(browser);
+          return 2;
+        }
+      }
     }
     try {
       log(`질문: ${q}`);
@@ -314,6 +413,39 @@ async function runQuestions(file) {
       if (String(e.message) === 'QUOTA') {
         log('DBpia AI 이용 한도에 도달했습니다. 다음 달/기관인증 후 이어서 실행하십시오.');
         break;
+      }
+      if (String(e.message) === 'LOGIN_LOST') {
+        if (loginDead) {
+          log('로그인 복구 불가. 직접 로그인 후 재개하십시오 (RESUME.md 재로그인 절차).');
+          try { await page.close(); } catch (_) {}
+          state({ answered: n, lastRunQuestions: todo.length });
+          await release(browser);
+          return 2;
+        }
+        log('DBpia 로그인이 풀렸다. 자동 로그인을 시도한다.');
+        let okLogin = false;
+        try { okLogin = await autoLogin(page); } catch (_) { okLogin = false; }
+        if (okLogin) {
+          log('  같은 질문을 다시 시도한다.');
+          try { await page.close(); } catch (_) {}
+          page = await newAskPage();
+          inBatch = 0;
+          try {
+            const r2 = await askOne(page, q);
+            saveAnswer(q, r2);
+            await sleep(2500);
+            continue;
+          } catch (e2) {
+            log('  재로그인 후 재시도 실패:', e2.message, '(다음 질문으로 넘어간다)');
+          }
+        } else {
+          loginDead = true;
+          log('자동 로그인 실패. RESUME.md 재로그인 절차로 직접 로그인한 뒤 재개하십시오.');
+          try { await page.close(); } catch (_) {}
+          state({ answered: n, lastRunQuestions: todo.length });
+          await release(browser);
+          return 2;
+        }
       }
       if (String(e.message) === 'WINDOW_FULL') {
         // 대화창이 가득 찼다: 새 대화로 교체하고 같은 질문을 버리지 않고 다시 시도한다.
@@ -330,6 +462,13 @@ async function runQuestions(file) {
           if (String(e2.message) === 'QUOTA') {
             log('DBpia AI 이용 한도에 도달했습니다. 다음 달/기관인증 후 이어서 실행하십시오.');
             break;
+          }
+          if (String(e2.message) === 'LOGIN_LOST') {
+            log('DBpia 로그인이 풀렸습니다. RESUME.md 재로그인 절차로 다시 로그인한 뒤 재개하십시오.');
+            try { await page.close(); } catch (_) {}
+            state({ answered: n, lastRunQuestions: todo.length });
+            await release(browser);
+            return 2;
           }
           log('  재시도 실패:', e2.message, '(다음 질문으로 넘어간다)');
         }
@@ -363,6 +502,7 @@ async function runQuestions(file) {
   const arg = process.argv.slice(2);
   let code = 1;
   if (arg.includes('--login')) code = await login();
+  else if (arg.includes('--login-auto')) code = await loginAuto();
   else if (arg.includes('--check')) code = await check();
   else {
     const i = arg.indexOf('--questions');
