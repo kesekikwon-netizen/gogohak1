@@ -114,62 +114,109 @@ async function check() {
   return ok ? 0 : 2;
 }
 
+function currentConvId(page) {
+  const m = page.url().match(/\/search\/(\d+)/);
+  return m ? m[1] : '';
+}
+
 async function askOne(page, question) {
-  const beforeUrl = page.url();
-  let convId = (beforeUrl.match(/\/search\/(\d+)/) || [])[1] || '';
+  const convId = currentConvId(page);
+  async function snapshot() {
+    try {
+      return await page.evaluate(async (id) => {
+        if (id) {
+          const r = await fetch(`https://agent.dbpia.co.kr/vetter_conversations/${id}`, { credentials: 'include' });
+          const j = JSON.parse(await r.text());
+          const msgs = j.messages || [];
+          const asst = msgs.filter((m) => m.role === 'assistant');
+          const last = asst.length ? String(asst[asst.length - 1].content || '') : '';
+          return { n: asst.length, last };
+        }
+        const ta = document.querySelector('textarea');
+        return { n: -1, last: document.body.innerText, ta: ta ? ta.value : '' };
+      }, convId);
+    } catch (e) { return { n: -2, last: '' }; }
+  }
+
+  const before = await snapshot();
   const ta = await page.$('textarea');
   if (!ta) throw new Error('질문 입력창을 찾지 못했습니다.');
   await ta.click();
   await page.evaluate(() => { const t = document.querySelector('textarea'); t.value = ''; });
-  await ta.type(question, { delay: 8 });
-  await sleep(250);
+  // 타이핑이 잘렸는지 확인하고, 잘렸으면 다시 입력한다.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.evaluate(() => { const t = document.querySelector('textarea'); t.value = ''; });
+    await ta.type(question, { delay: 8 });
+    await sleep(400);
+    const echo = await page.evaluate(() => document.querySelector('textarea').value || '');
+    if (echo.replace(/\s+/g, ' ').trim().length >= question.replace(/\s+/g, ' ').trim().length * 0.95) break;
+    if (attempt === 2) throw new Error('INPUT_TRUNCATED');
+    await sleep(1000);
+  }
   await page.keyboard.press('Enter');
 
-  // 같은 대화에서 이어 묻는 경우 URL의 대화 ID를 그대로 쓴다.
-  if (!convId) {
+  // 새 대화가 열리기를 기다린다.
+  let id = convId;
+  if (!id) {
     for (let i = 0; i < 30; i++) {
       await sleep(2000);
-      const m = page.url().match(/\/search\/(\d+)/);
-      if (m) { convId = m[1]; break; }
+      id = currentConvId(page);
+      if (id) break;
     }
   }
-  if (convId) {
+  if (id) {
+    // 같은 대화를 이어쓸 때: 어시스턴트 메시지 수가 늘고,
+    // 새 답변이 이전 답변과 다를 때만 완성으로 인정한다.
+    const beforeN = id === convId ? before.n : 0;
+    const beforeLast = id === convId ? before.last : '';
     let last = '', stable = 0;
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 120; i++) {
       await sleep(3000);
       let data = null;
       try {
-        data = await page.evaluate(async (id) => {
-          const r = await fetch(`https://agent.dbpia.co.kr/vetter_conversations/${id}`, { credentials: 'include' });
+        data = await page.evaluate(async (cid) => {
+          const r = await fetch(`https://agent.dbpia.co.kr/vetter_conversations/${cid}`, { credentials: 'include' });
           return JSON.parse(await r.text());
-        }, convId);
+        }, id);
       } catch (e) {}
       const msgs = (data && data.messages) || [];
-      const assistant = [...msgs].reverse().find((m) => m.role === 'assistant');
-      const content = (assistant && assistant.content) || '';
-      if (content.length > 200 && content === last) stable++; else stable = 0;
+      const asst = msgs.filter((m) => m.role === 'assistant');
+      const content = asst.length ? String(asst[asst.length - 1].content || '') : '';
+      const isNew = asst.length > beforeN && content !== beforeLast;
+      if (isNew && content.length > 200 && content === last) stable++; else stable = 0;
       last = content;
       if (stable >= 2) {
         const links = [];
         const seen = new Set();
-        for (const m of msgs) {
-          if (m.role !== 'assistant') continue;
+        for (const m of asst) {
           for (const c of String(m.content || '').matchAll(/<CIT\s+([A-Za-z0-9]+)_\d+>/g)) {
             if (seen.has(c[1])) continue;
             seen.add(c[1]);
             links.push({ href: `https://www.dbpia.co.kr/journal/articleDetail?nodeId=${c[1]}`, title: '' });
           }
         }
-        return { answer: content, links, conversationId: convId };
+        // 인용은 새 답변에서만 집계한다.
+        const fresh = [];
+        {
+          const seenF = new Set();
+          for (const c of String(content).matchAll(/<CIT\s+([A-Za-z0-9]+)_\d+>/g)) {
+            if (seenF.has(c[1])) continue;
+            seenF.add(c[1]);
+            fresh.push({ href: `https://www.dbpia.co.kr/journal/articleDetail?nodeId=${c[1]}`, title: '' });
+          }
+        }
+        return { answer: content, links: fresh.length ? fresh : links, conversationId: id };
       }
       const body = await page.evaluate(() => document.body.innerText);
-      if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달|로그인하세요/.test(body) && content.length === 0)
+      if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달|로그인하세요/.test(body) && !isNew)
         throw new Error('QUOTA');
     }
     throw new Error('TIMEOUT');
   }
 
   // URL이 바뀌지 않는 경우(짧은 답변 등)는 화면 텍스트로 대신한다.
+  // 이전 화면보다 길어진 경우만 인정해 낡은 답변 저장을 막는다.
+  const baseLen = (before.last || '').length;
   let last = -1, stable = 0;
   for (let i = 0; i < 60; i++) {
     await sleep(3000);
@@ -182,7 +229,7 @@ async function askOne(page, question) {
     if (now.text.length === last) stable++; else { stable = 0; last = now.text.length; }
     const delta = now.text.slice(-4000);
     const loading = /답변을 생성하고 있습니다|파일을 불러오고 있습니다|잠시만 기다려주세요|논문을 확인하고 있습니다|검색중/.test(delta);
-    if (stable >= 3 && !loading && delta.length > 200)
+    if (stable >= 3 && !loading && delta.length > 200 && now.text.length > baseLen + 200)
       return { answer: delta, links: now.links, conversationId: '' };
     if (/이용\s*횟수|무료\s*검색.*(끝|소진)|한도에 도달|로그인하세요/.test(delta) && stable >= 2)
       throw new Error('QUOTA');
