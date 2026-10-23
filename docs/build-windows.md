@@ -5,7 +5,7 @@
 ## 요약
 
 1. OSGeo4W 설치 — 루트 `C:\OSGeo4W` 권장  
-   패키지: `qgis-dev`, `qt6-devel`, `gdal-dev-devel`, `sqlite3-devel`, `pdal-dev`
+   패키지: `qgis-dev`, `qt6-devel`, `gdal-dev-devel`, `sqlite3-devel`, `zlib-devel`, `pdal-dev`
 2. VS 2022 Build Tools (MSVC) — QGIS/OSGeo4W와 **동일 major 툴체인** 권장
 3. CMake는 `dev-env.lock.json`의 앞 두 자리
 4. `.\scripts\dev-env.ps1` 후 cmake. SDK 경로는 그 스크립트가 찾은 값이다

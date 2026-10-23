@@ -79,6 +79,7 @@ OSGeo4W 패키지:
 - `qt6-devel`
 - `gdal-dev-devel`
 - `sqlite3-devel`
+- `zlib-devel`
 - `pdal-dev`
 
 판 기준: 저장소 `dev-env.lock.json`(패키지별 정확한 판). `VERSION_QGIS_PIN.txt`는 사람이 읽는 메모다.

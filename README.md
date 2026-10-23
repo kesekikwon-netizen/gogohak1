@@ -33,7 +33,7 @@ cd hgis
 - CMake는 `dev-env.lock.json`의 앞 두 자리 (`C:\Program Files\CMake\bin`, `C:\CMake\bin` 또는 PATH)
 - VS 2022 BuildTools MSVC. 도구 모음 앞 두 자리는 `dev-env.lock.json`
 - 체크아웃은 클론한 폴더. SDK는 `scripts/dev-env.ps1`이 `OSGEO4W_ROOT` → `C:\OSGeo4W` → `D:\OSGeo4W` → `A:\OSGeo4W` 순으로 찾는다
-  - 패키지 판: `dev-env.lock.json` (`qgis-dev`, `qt6-devel`, `gdal-dev-devel`, `sqlite3-devel`, `pdal-dev`)
+  - 패키지 판: `dev-env.lock.json` (`qgis-dev`, `qt6-devel`, `gdal-dev-devel`, `sqlite3-devel`, `zlib-devel`, `pdal-dev`)
 - 산출물: `build\Release\ka-hgis.exe`, `ka_hgis_tests.exe`, `ka_workflow_tests.exe`
 
 ## 원클릭 빌드·검증

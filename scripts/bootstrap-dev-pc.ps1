@@ -78,7 +78,7 @@ if ($OsgeoRoot) { $env:OSGEO4W_ROOT = $OsgeoRoot }
 if (-not $env:OSGEO4W_ROOT -or -not (Test-Path $env:OSGEO4W_ROOT)) {
   Write-Fail "OSGeo4W not found. Install to C:\OSGeo4W (or set OSGEO4W_ROOT)."
   Write-Host "  .\scripts\install-deps.ps1   # Admin PowerShell"
-  Write-Host "  packages: qgis-dev, qt6-devel, gdal-dev-devel, sqlite3-devel, pdal-dev"
+  Write-Host "  packages: qgis-dev, qt6-devel, gdal-dev-devel, sqlite3-devel, zlib-devel, pdal-dev"
   exit 4
 }
 $qgisDev = Join-Path $env:OSGEO4W_ROOT "apps\qgis-dev"

@@ -40,7 +40,7 @@ $setupExe = "$env:TEMP\osgeo4w-setup.exe"
 Write-Host "Downloading OSGeo4W installer to $setupExe..." -ForegroundColor Gray
 Invoke-WebRequest -Uri "https://download.osgeo.org/osgeo4w/v2/osgeo4w-setup.exe" -OutFile $setupExe
 
-$packages = "qgis-dev,qt6-devel,gdal-dev-devel,sqlite3-devel,pdal-dev"
+$packages = "qgis-dev,qt6-devel,gdal-dev-devel,sqlite3-devel,zlib-devel,pdal-dev"
 Write-Host "Installing OSGeo4W packages ($packages)..." -ForegroundColor Yellow
 Write-Host "Command: $setupExe -q -k -r -R $OSGEO_DIR -s https://download.osgeo.org/osgeo4w/v2/ -P $packages" -ForegroundColor Gray
 
