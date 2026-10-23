@@ -70,14 +70,13 @@ class TestUiTerms : public QObject {
   }
 
   // 사용자에게 보이는 보고서 글자에는 개발 용어를 쓰지 않는다(2026-10-23 설계도 10절, 스킬 strata-ui-wording 글자 사전).
-  // 영문·숫자·기호만 있는 문자열(필드 식별자, 주소)과 양식 호환 때문에 이름을 못 바꾸는 필드 이름은 건너뛴다.
+  // 영문·숫자·기호만 있는 문자열(필드 식별자, 주소)은 건너뛴다. 화면에 보이는 칸 이름표는 한글이어야 한다.
   void reportTextHasNoDeveloperTerms() {
     const QString root = QString::fromUtf8(KA_SOURCE_DIR);
     const QStringList banned = {QStringLiteral("RAG"), QStringLiteral("SDK"), QStringLiteral("피처"),
                                 QStringLiteral("누름틀"), QStringLiteral("Antigravity"), QStringLiteral("슬롯"),
                                 QStringLiteral("_SLOT"), QStringLiteral("하네스"), QStringLiteral("┏"), QStringLiteral("┓"),
                                 QStringLiteral("┗"), QStringLiteral("┛")};
-    const QStringList keepFieldNames = {QStringLiteral("RAG인용슬롯")};
     const QRegularExpression identifierOnly(QStringLiteral("^[A-Za-z0-9_./:?=&%#-]*$"));
     QStringList hits;
     for (const QString& pattern : {QStringLiteral("src/app/KaHwp*.cpp"), QStringLiteral("src/app/KaDbpia*.cpp"),
@@ -91,7 +90,7 @@ class TestUiTerms : public QObject {
         const QStringList lines = QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
         for (int n = 0; n < lines.size(); ++n)
           for (const QString& text : literalsOf(lines.at(n))) {
-            if (identifierOnly.match(text).hasMatch() || keepFieldNames.contains(text)) continue;
+            if (identifierOnly.match(text).hasMatch()) continue;
             for (const QString& word : banned)
               if (text.contains(word)) {
                 hits << QStringLiteral("%1:%2 [%3] %4").arg(path.mid(root.size() + 1)).arg(n + 1).arg(word, text.left(60));

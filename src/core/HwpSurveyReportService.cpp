@@ -165,7 +165,7 @@ bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QStr
   insertStyledParagraph(doc, s.discussionDraft, 1000, false, 0);
   insertStyledParagraph(doc, s.ragCitationSlotText, 1000, false, 0);
   bindField(doc, u"고찰본문", u"DISCUSSION_BODY", s.discussionDraft);
-  bindField(doc, u"RAG인용슬롯", u"RAG_CITATION_SLOT", s.ragCitationSlotText);
+  bindField(doc, u"보고서 근거", u"RAG_CITATION_SLOT", s.ragCitationSlotText);
   if (maxStage > 3) {
     insertStyledParagraph(doc, QStringLiteral("부록 <표 1-2> 반경 %1m 주변유적 전체 목록").arg(qRound(s.radiusMeters)), 1200, true, 1);
     insertStyledParagraph(doc, QStringLiteral("※ 전체 %1행. 같은 이름의 도형도 합치지 않았고, 유산코드가 없으면 도형 번호로 구분했습니다. ○는 보고서 부재가 아니라 이 PC의 보고서 파일에 원문이 없다는 뜻입니다.").arg(s.siteEntries.size()), 900, false, 0);
@@ -192,7 +192,10 @@ bool ReportDocumentSession::saveAs(const std::filesystem::path& outputPath, cons
 QVector<FieldEntry> ReportDocumentSession::fields() const {
   QVector<FieldEntry> out;
   if (auto* impl = (m_impl && m_impl->doc) ? dynamic_cast<openhwp::core::DocumentImpl*>(m_impl->doc->GetImpl()) : nullptr)
-    for (const auto& f : impl->Model().fields) out.push_back({QString::fromStdString(f.name_utf8), QString::fromStdString(f.text_utf8)});
+    for (const auto& f : impl->Model().fields) {
+      const QString name = QString::fromStdString(f.name_utf8), memo = QString::fromStdString(f.memo_utf8);
+      out.push_back({name, QString::fromStdString(f.text_utf8), memo.isEmpty() ? name : memo});
+    }
   return out;
 }
 bool ReportDocumentSession::setFieldValue(const QString& fieldName, const QString& value) {
@@ -271,7 +274,7 @@ QString ReportDocumentSession::renderPreviewHtml(const QString& liveStageLabel, 
   if (!extraVisualsHtml.isEmpty()) html += extraVisualsHtml;
   if (showFieldMarks && !model.fields.empty()) {
     html += QStringLiteral("<div style='margin-top:14px;padding:8px;background:#F3EFE8;border:1px dashed #B5573A;font-size:8.4pt;color:#4B4842;'><b style='color:#B5573A;'>⟪양식 칸⟫</b> ");
-    for (const auto& f : model.fields) html += QStringLiteral("<b>⟪%1⟫</b> %2 &nbsp; ").arg(QString::fromStdString(f.name_utf8).toHtmlEscaped(), QString::fromStdString(f.text_utf8).toHtmlEscaped());
+    for (const auto& f : model.fields) html += QStringLiteral("<b>⟪%1⟫</b> %2 &nbsp; ").arg((f.memo_utf8.empty() ? QString::fromStdString(f.name_utf8) : QString::fromStdString(f.memo_utf8)).toHtmlEscaped(), QString::fromStdString(f.text_utf8).toHtmlEscaped());
     html += QStringLiteral("</div>");
   }
   return html + QStringLiteral("</td></tr><tr><td align='center' style='padding:10px 38px 18px 38px;color:#6E6A63;font-size:8.4pt;border-top:1px solid #DDD6C9;'>- 1 -</td></tr></table></body></html>");

@@ -188,6 +188,7 @@ void KaHwpReportStudio::onOpenTemplateClicked() {
 }
 
 void KaHwpReportStudio::onSaveHwpxClicked() {
+  if (!confirmExportClean()) return;
   const QString path = QFileDialog::getSaveFileName(this, QStringLiteral("한글 표준(.hwpx)으로 저장"),
                                                     QDir::home().filePath(QStringLiteral("발굴조사보고서.hwpx")),
                                                     QStringLiteral("한글 표준 문서 (*.hwpx)"));
@@ -197,6 +198,7 @@ void KaHwpReportStudio::onSaveHwpxClicked() {
 }
 
 void KaHwpReportStudio::onSaveHwp5Clicked() {
+  if (!confirmExportClean()) return;
   const QString path = QFileDialog::getSaveFileName(this, QStringLiteral("한글 5.0(.hwp)으로 저장"),
                                                     QDir::home().filePath(QStringLiteral("발굴조사보고서.hwp")),
                                                     QStringLiteral("한글 5.0 문서 (*.hwp)"));
@@ -208,7 +210,7 @@ void KaHwpReportStudio::onSaveHwp5Clicked() {
 void KaHwpReportStudio::onFieldCellChanged(int row, int column) {
   if (m_updatingTable || column != 1) return;
   QTableWidgetItem *nameItem = m_fieldTable->item(row, 0), *valItem = m_fieldTable->item(row, 1);
-  if (nameItem && valItem && m_session->setFieldValue(nameItem->text(), valItem->text()))
+  if (nameItem && valItem && m_session->setFieldValue(nameItem->data(Qt::UserRole).toString(), valItem->text()))
     syncUiFromSession(QStringLiteral("양식 칸 갱신: ") + nameItem->text(), 100);
 }
 
@@ -217,7 +219,8 @@ void KaHwpReportStudio::syncUiFromSession(const QString& liveStageLabel, int pro
   const auto list = m_session->fields();
   m_fieldTable->setRowCount(list.size());
   for (int i = 0; i < list.size(); ++i) {
-    auto* kItem = new QTableWidgetItem(list[i].name);
+    auto* kItem = new QTableWidgetItem(list[i].label);
+    kItem->setData(Qt::UserRole, list[i].name);  // 바꿀 때는 내부 이름으로 찾는다.
     kItem->setFlags(kItem->flags() & ~Qt::ItemIsEditable);
     m_fieldTable->setItem(i, 0, kItem);
     m_fieldTable->setItem(i, 1, new QTableWidgetItem(list[i].value));

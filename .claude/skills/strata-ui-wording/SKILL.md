@@ -27,7 +27,7 @@ description: Rules for any text a Strata (ka-hgis) user can see on screen or in 
 | Antigravity SDK / DBpia 응답 없음 | 수집된 논문이 없습니다 |
 | 하네스, SDK, MCP | (쓰지 않는다) |
 
-금지어 목록(시험): RAG, SDK, 피처, 누름틀, Antigravity, 슬롯, _SLOT, 하네스, ┏ ┓ ┗ ┛. 영문·숫자·기호만 있는 문자열(필드 식별자, 주소)과 양식 호환 필드 이름 `RAG인용슬롯`은 건너뛴다.
+금지어 목록(시험): RAG, SDK, 피처, 누름틀, Antigravity, 슬롯, _SLOT, 하네스, ┏ ┓ ┗ ┛. 영문·숫자·기호만 있는 문자열(필드 식별자, 주소)과.
 
 써도 되는 이름: HWPX, HWP(파일 형식), DBpia, VWorld, GIS, GPKG, SHP, PDF.
 

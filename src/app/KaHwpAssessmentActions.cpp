@@ -55,3 +55,14 @@ void KaHwpReportStudio::onSaveAssessmentClicked() {
   appendChatMessage(QStringLiteral("저장"), QStringLiteral("평가 자료를 저장했습니다: %1").arg(QDir::toNativeSeparators(folder)) +
                                                (b.problems.isEmpty() ? QString() : QStringLiteral("\n확인할 점 %1건: %2").arg(b.problems.size()).arg(b.problems.first())));
 }
+
+// 저장 직전 검사: 문서에 개발 용어·자리표시자·깨진 글자·장식 문자가 남았는지 본다.
+// 제출 꾸러미와 같은 규칙으로 막지 않고, 목록을 보여 준 뒤 한 번 묻는다.
+bool KaHwpReportStudio::confirmExportClean() {
+  const QStringList found = AssessmentContract::scanExportText(m_previewView ? m_previewView->toPlainText() : QString());
+  if (found.isEmpty()) return true;
+  const QString list = QStringLiteral("• ") + found.mid(0, 8).join(QStringLiteral("\n• "));
+  return QMessageBox::question(this, QStringLiteral("저장 전 확인"),
+                               QStringLiteral("문서에 남아 있으면 안 되는 글자가 %1건 있습니다.\n\n%2\n\n그래도 저장할까요?").arg(found.size()).arg(list)) ==
+         QMessageBox::Yes;
+}

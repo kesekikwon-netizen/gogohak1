@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QTemporaryDir>
+#include <QTextDocumentFragment>
 #include <QtTest>
 
 using namespace AssessmentSkeleton;
@@ -210,6 +211,36 @@ class TestAssessmentSkeleton : public QObject {
     QVERIFY(html.contains(QStringLiteral("&lt;b&gt;위험&lt;/b&gt; &amp; 유적")));
     QVERIFY(html.contains(QStringLiteral("확인할 점")));
     QVERIFY(html.contains(QStringLiteral("예시 문제 하나")));
+  }
+
+  // M0 정리가 끝났다는 증거: 실제로 만든 보고서 미리보기에 개발 용어·자리표시자·장식 문자가 남지 않는다.
+  void finishedReportPreviewHasNoLeftovers() {
+    Fixture f;
+    HwpSurveyReportService::ReportDocumentSession session;
+    QString err;
+    QVERIFY2(session.buildStandardReport(f.snap, &err), qUtf8Printable(err));
+    const QString text = QTextDocumentFragment::fromHtml(session.renderPreviewHtml()).toPlainText();
+    QVERIFY(text.contains(QStringLiteral("황남동 유적")));  // 비어 있는 문서가 아니라는 확인
+    const QStringList found = AssessmentContract::scanExportText(text);
+    QVERIFY2(found.isEmpty(), qUtf8Printable(found.join(QLatin1Char('\n'))));
+  }
+
+  // 미리보기의 양식 칸 표시는 개발용 이름(SURVEY_NAME …) 대신 한글 이름표를 보인다. 내부 이름은 바뀌지 않는다.
+  void previewMarksShowLabelsNotInternalNames() {
+    Fixture f;
+    HwpSurveyReportService::ReportDocumentSession session;
+    QString err;
+    QVERIFY2(session.buildStandardReport(f.snap, &err), qUtf8Printable(err));
+    const QString text = QTextDocumentFragment::fromHtml(session.renderPreviewHtml()).toPlainText();
+    QVERIFY(text.contains(QStringLiteral("⟪조사명⟫")));
+    QVERIFY(text.contains(QStringLiteral("⟪보고서 근거⟫")));
+    QVERIFY(!text.contains(QStringLiteral("SURVEY_NAME")));
+    bool sawRagField = false;
+    for (const auto& field : session.fields()) {
+      QVERIFY2(!field.label.isEmpty(), qUtf8Printable(field.name));
+      if (field.name == QStringLiteral("RAG_CITATION_SLOT")) sawRagField = true;  // 내부 이름은 그대로(양식 호환)
+    }
+    QVERIFY(sawRagField);
   }
 
   void sameInputGivesSameOutput() {

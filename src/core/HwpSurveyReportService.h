@@ -70,8 +70,9 @@ struct SurveySnapshot {
 };
 
 struct FieldEntry {
-  QString name;
+  QString name;   // 내부 이름(양식 호환). 화면에는 보이지 않는다.
   QString value;
+  QString label;  // 화면에 보이는 한글 이름표
 };
 
 using RagSlotCallback = std::function<QString(const SurveySnapshot& snapshot)>;

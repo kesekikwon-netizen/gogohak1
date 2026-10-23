@@ -166,6 +166,20 @@ class TestAssessmentContract : public QObject {
     QVERIFY(anyContains(validateAssessment(result({claim(QStringLiteral("없는 GIS 번호"), QStringLiteral("fact"), {QStringLiteral("G9")})}), ev, {}, gis), QStringLiteral("G9")));
   }
 
+  void exportScanFindsLeftoversInFinishedText() {
+    QVERIFY(scanExportText(QStringLiteral("Ⅰ. 머리말\n조사면적 1,840 ㎡ (1개 구역)\n✓ 동일 보고서 『황남동』 78쪽")).isEmpty());
+    const QStringList found = scanExportText(QStringLiteral("보고서 RAG_CITATION_SLOT 자리\n┏ 장식 ┓\n깨짐 \uFFFD 글자\n피처 12"));
+    QVERIFY(anyContains(found, QStringLiteral("RAG")));
+    QVERIFY(anyContains(found, QStringLiteral("_SLOT")));
+    QVERIFY(anyContains(found, QStringLiteral("┏")));
+    QVERIFY(anyContains(found, QStringLiteral("깨진 글자")));
+    QVERIFY(anyContains(found, QStringLiteral("피처")));
+    // 같은 낱말은 한 번만 알린다(줄 수가 많아도 목록이 길어지지 않게).
+    QCOMPARE(scanExportText(QStringLiteral("RAG RAG RAG")).size(), 1);
+    // 문제 낱말 둘레 글자를 보여 줘 어디인지 알 수 있다.
+    QVERIFY(anyContains(scanExportText(QStringLiteral("앞글자 RAG 뒷글자")), QStringLiteral("앞글자")));
+  }
+
   void figuresMustBeLabeledAndGrounded() {
     const QJsonArray ev{evidence(QStringLiteral("E1"))};
     QJsonObject r = result({claim(QStringLiteral("층위 순서를 모식도로 보인다."), QStringLiteral("inference"), {QStringLiteral("E1")})});

@@ -22,7 +22,7 @@ description: The agreed design for Strata's pre-survey assessment (시굴 전 �
 ## 지금 할 수 있는 것, 막힌 것 (2026-10-23)
 - **막힘**: Antigravity SDK 구현(토큰이 다 되어 며칠), RAG 수집(다른 터미널이 진행 중이라 건드리지 않음). 경주 독립 DB는 앱이 아직 읽지 않는다.
 - **끝남**: M0 글자 정리(개발 용어 37곳, 자리표시자, 장식 문자)와 `ui_terms` 금지어 시험, M1 계약 코드 `src/core/AssessmentContract.{h,cpp}`(사실 묶음 `factsBundle`, 근거 항목 `validateEvidenceItem`, 평가 결과 `validateAssessment`, `gisIdsOf`) + 뼈대 `src/core/AssessmentSkeleton.{h,cpp}`(AI 없이 요약·조사구역 개요·주변유적·유적별 근거·부족한 자료·참고문헌을 쓴다, 시험 `assessment_skeleton`, 파일 내보내기 `writeBundle` + 보고서 화면 저장 메뉴 「평가 자료 저장…」, 화면 표시 `renderHtml` + 「평가」 보기, 화면 코드는 `src/app/KaHwpAssessmentActions.cpp`) + 시험 `assessment_contract` + 샘플 `docs/design/2026-10-23-survey-assessment/samples/`. SDK 결과는 반드시 `validateAssessment`를 통과해야 앱에 쓴다.
-- **할 수 있음 (SDK·수집 없이)**: M0 남은 것(기관 이름 설정화), 출고 검사 연결(내보내기 직전 막기), 앱 안 DBpia 단추 숨김(M2 일부).
+- **할 수 있음 (SDK·수집 없이)**: M0 남은 것(기관 이름 설정화), 출고 검사의 평가서 규칙 연결(한글 문서 저장 직전 검사 `confirmExportClean`/`scanExportText`는 이미 연결됨), 앱 안 DBpia 단추 숨김(M2 일부).
 - 할 일을 고를 때는 정본 11절의 단계 순서(M0 → M1 → …)를 따르고, 막힌 단계는 건너뛴다.
 
 ## 진행하면서

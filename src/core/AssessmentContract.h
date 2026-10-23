@@ -24,6 +24,10 @@ QStringList validateAssessment(const QJsonObject& result, const QJsonArray& evid
 // 사실 묶음이 낸 GIS 번호(G 카드, S 유적). 평가서는 이 번호도 인용할 수 있다.
 QStringList gisIdsOf(const QJsonObject& facts);
 
+// 내보내려는 문서 글자(태그를 뗀 글)에서 남아 있으면 안 되는 것을 찾는다: 개발 용어, 자리표시자(_SLOT),
+// 깨진 글자(U+FFFD), 장식 문자(┏ ┓ ┗ ┛). 같은 낱말은 한 번만, 둘레 글자와 함께 알린다. 비어 있으면 통과.
+QStringList scanExportText(const QString& plainText);
+
 // 모식도에 반드시 붙이는 표시.
 QString figureLabel();
 

@@ -176,6 +176,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <tr><td>문서 속 내부 표지</td><td><code>RAG_CITATION_SLOT</code>, 「RAG 연결 슬롯 대기 중」, 「OpenHwpSDK 초기화 실패」가 문서에 들어갈 수 있다</td><td>제출물에 쓰레기가 남는다</td></tr>
     <tr><td>내부 용어 노출</td><td>보고서 관련 글자에 「RAG」 22곳, 「GIS 서지」 10곳, 「누름틀」 6곳, 「피처ID」 3곳</td><td>현장 사용자가 모르는 말</td></tr>
     <tr><td>가짜 진행 표시</td><td>「작성 시작」 뒤 0.32초 타이머가 단계를 올리며 「사실·인용 교차검증」, 「집필」, 「작성 완료」를 보여 주지만 실제로는 4단계까지 문서를 쌓을 뿐이다</td><td>하지 않은 일을 했다고 보여 준다. <b>고침</b>: 실제 4단계로 바꾸고 시험이 지킨다</td></tr>
+    <tr><td>양식 칸 이름 노출</td><td>미리보기가 <code>SURVEY_NAME</code>, <code>RAG_CITATION_SLOT</code> 같은 내부 이름을 글자로 보여 주고 오른쪽 표에도 나온다</td><td>현장 사용자가 개발용 글자를 본다. <b>고침</b>: 한글 이름표를 보이고 내부 이름은 그대로 둔다</td></tr>
     <tr><td>기호</td><td>✓ △ ◌ ○ 가 설명 없이 표에 들어가고 ┏ ┓ 같은 장식도 있다</td><td>뜻 모를 글자</td></tr>
   </table></div>
   <div class="note ok"><b>이미 잘 된 것, 버리지 않습니다.</b> <code>GisFactHarness::Ledger</code>(앱이 계산한 값만 담고 없는 자료는 잠금), 근거 4단계 라벨, 「임의로 채우지 않았습니다」 원칙. 이것이 계약의 뼈대가 됩니다.</div>
@@ -295,7 +296,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
 
 <section id="gate">
   <h2>8 출고 검사 <small>제출물 품질을 지키는 문</small></h2>
-  <p class="sub">내보내기 직전에 앱이 검사하고, 걸리면 내보내기를 막고 목록으로 알립니다.</p>
+  <p class="sub">내보내기 직전에 앱이 검사하고, 걸리면 목록을 보여 주고 한 번 묻습니다(제출 꾸러미와 같은 규칙). 한글 문서 저장에는 이미 연결했습니다.</p>
   <div class="cols">
     <div><h3>막는 것</h3>
       <ul>

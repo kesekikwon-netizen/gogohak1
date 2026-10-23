@@ -86,6 +86,21 @@ void checkClaim(const QJsonObject& claim, const QString& where, const QSet<QStri
 
 }  // namespace
 
+QStringList scanExportText(const QString& plainText) {
+  QStringList found;
+  auto report = [&](const QString& word, const QString& label) {
+    const int at = plainText.indexOf(word);
+    if (at < 0) return;
+    const QString around = plainText.mid(qMax(0, at - 12), word.size() + 24).simplified();
+    found << QStringLiteral("%1 「%2」").arg(label, around);
+  };
+  for (const QString& term : kDeveloperTerms) report(term, QStringLiteral("개발 용어(%1)").arg(term));
+  for (const QString& mark : {QStringLiteral("┏"), QStringLiteral("┓"), QStringLiteral("┗"), QStringLiteral("┛")})
+    report(mark, QStringLiteral("장식 문자(%1)").arg(mark));
+  report(QString(QChar(0xFFFD)), QStringLiteral("깨진 글자"));
+  return found;
+}
+
 QString figureLabel() { return QStringLiteral("모식도(실측 아님)"); }
 
 QJsonObject factsBundle(const GisFactHarness::Ledger& ledger, const HwpSurveyReportService::SurveySnapshot& snapshot) {
