@@ -25,6 +25,16 @@ import store  # noqa: E402
 OUT_DIR = Path("/mnt/data-drawing/gyeongju_rag")
 ASK = Path(__file__).resolve().parent / "ask_ai.js"
 
+# gaps 수렴 뒤에 소진할 정적 풀(가치 순). done 집합으로 건너뛰므로 중복 질문 없음.
+POOLS = [
+    "deep_questions.jsonl",
+    "aspect_questions.jsonl",
+    "cited_questions.jsonl",
+    "questions.jsonl",
+    "gap_questions_all.jsonl",
+    "gap_questions.jsonl",
+]
+
 
 def log(msg: str) -> None:
     print(time.strftime("[%H:%M:%S] ") + msg, flush=True)
@@ -50,12 +60,54 @@ def run_asker(qlist: Path) -> bool:
         return False
 
 
+def drain_pools(db: str, per_round: int) -> int:
+    """정적 풀을 순서대로 소진한다. 배치마다 DB 반영 후 증가 없으면 중단."""
+    total = 0
+    conn = store.connect(db)
+    prev = snap(conn)
+    for name in POOLS:
+        p = OUT_DIR / name
+        if not p.exists():
+            continue
+        done = {r[0] for r in conn.execute("SELECT question FROM ai_turns")}
+        qs = [l.strip() for l in p.read_text(encoding="utf-8").splitlines()
+              if l.strip() and l.strip() not in done]
+        log(f"[pool:{name}] 남은 {len(qs)}건")
+        for i in range(0, len(qs), per_round):
+            batch = qs[i:i + per_round]
+            qf = OUT_DIR / "pool_batch.jsonl"
+            qf.write_text("\n".join(batch) + "\n", encoding="utf-8")
+            log(f"[pool:{name}] {i + len(batch)}/{len(qs)} 질문")
+            if not run_asker(qf):
+                log("asker 실패 — 풀 소진 중단 (브라우저를 살린 뒤 --pools-only로 재개)")
+                return total
+            import_ai.import_file(OUT_DIR / "ai_answers.jsonl", Path(db))
+            conn = store.connect(db)
+            cur = snap(conn)
+            growth = {k: cur[k] - prev[k] for k in prev}
+            log(f"[pool:{name}] 증가: {growth}")
+            prev = cur
+            total += len(batch)
+            if all(v <= 0 for v in growth.values()):
+                log("증가 없음 — 풀 소진 중단")
+                return total
+    return total
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rounds", type=int, default=6)
     ap.add_argument("--per-round", type=int, default=60)
     ap.add_argument("--db", default=str(store.DEFAULT_DB))
+    ap.add_argument("--pools-only", action="store_true",
+                    help="gaps 루프를 건너뛰고 정적 풀만 소진한다")
     args = ap.parse_args()
+
+    if args.pools_only:
+        n = drain_pools(args.db, args.per_round)
+        print(json.dumps({"pooled": n, **snap(store.connect(args.db))},
+                         ensure_ascii=False, indent=2))
+        return 0
 
     conn = store.connect(args.db)
     prev = snap(conn)
@@ -101,7 +153,9 @@ def main() -> int:
         else:
             still = 0
         prev = cur
-    print(json.dumps(snap(store.connect(args.db)), ensure_ascii=False, indent=2))
+    pooled = drain_pools(args.db, args.per_round)
+    print(json.dumps({"pooled": pooled, **snap(store.connect(args.db))},
+                     ensure_ascii=False, indent=2))
     return 0
 
 
