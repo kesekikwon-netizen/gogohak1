@@ -19,6 +19,15 @@ QToolButton* makeCheckBtn(QWidget* parent, const QString& text, bool checked = f
   b->setChecked(checked);
   return b;
 }
+// DBpia 로그인 창 전용 프로필(Gemini와 분리). 기본은 쿠키를 저장하지 않고, 「로그인 기억」을 켜면 저장한다.
+QWebEngineProfile* dbpiaProfile() {
+  static auto* prof = [] {
+    auto* p = new QWebEngineProfile(QStringLiteral("ka-hgis-dbpia"), qApp);
+    p->setPersistentCookiesPolicy(QWebEngineProfile::NoPersistentCookies);
+    return p;
+  }();
+  return prof;
+}
 }  // namespace
 
 KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
@@ -138,17 +147,20 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   auto* btnOrgLogin = new QPushButton(QStringLiteral("기관 로그인"), dbpiaPane);
   auto* btnDbpiaAi = new QPushButton(QStringLiteral("DBpia AI"), dbpiaPane);
   auto* btnHarvest = new QPushButton(QStringLiteral("자동 문헌수집 실행"), dbpiaPane);
-  for (QWidget* w : {static_cast<QWidget*>(btnLogin), static_cast<QWidget*>(btnOrgLogin), static_cast<QWidget*>(btnDbpiaAi), static_cast<QWidget*>(btnHarvest)})
+  auto* chkRemember = new QCheckBox(QStringLiteral("로그인 기억"), dbpiaPane);
+  chkRemember->setToolTip(QStringLiteral("켜면 이 PC에 DBpia 로그인을 저장합니다. 공용 PC에서는 켜지 마세요."));
+  connect(chkRemember, &QCheckBox::toggled, this, [](bool on) {
+    dbpiaProfile()->setPersistentCookiesPolicy(on ? QWebEngineProfile::ForcePersistentCookies : QWebEngineProfile::NoPersistentCookies);
+  });
+  for (QWidget* w : {static_cast<QWidget*>(chkRemember), static_cast<QWidget*>(btnLogin), static_cast<QWidget*>(btnOrgLogin), static_cast<QWidget*>(btnDbpiaAi), static_cast<QWidget*>(btnHarvest)})
     dbpiaBar->addWidget(w);
   dbpiaBar->addStretch(1);
   dbpiaL->addLayout(dbpiaBar);
   auto ensureDbpiaWeb = [dbpiaPane, dbpiaL](const QString& url) {
     auto* web = dbpiaPane->findChild<QWebEngineView*>();
     if (!web) {
-      static QWebEngineProfile* s_prof = nullptr;
-      if (!s_prof) { s_prof = new QWebEngineProfile(QStringLiteral("ka-hgis-gemini-auth-v2"), qApp); s_prof->setPersistentCookiesPolicy(QWebEngineProfile::ForcePersistentCookies); }
       web = new QWebEngineView(dbpiaPane);
-      web->setPage(new QWebEnginePage(s_prof, web));
+      web->setPage(new QWebEnginePage(dbpiaProfile(), web));
       dbpiaL->addWidget(web, 1);
     }
     if (!url.isEmpty()) web->setUrl(QUrl(url));
