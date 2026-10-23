@@ -219,14 +219,12 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
     ++m_currentStage;
     m_session->buildStandardReport(m_cachedSnap, nullptr, qMin(4, m_currentStage));
     updateStepRail(m_currentStage);
-    const QStringList labels = {QString(), QStringLiteral("1/6단계: GIS 조사구역·최단거리 확정"),
-                                QStringLiteral("2/6단계: 발굴조사보고서 원문·층위 대조"),
-                                QStringLiteral("3/6단계: 학술문헌 서지 확인"),
-                                QStringLiteral("4/6단계: 사실·인용 교차검증"),
-                                QStringLiteral("5/6단계: Ⅱ장 유적별 현황·연관성 집필"),
-                                QStringLiteral("6/6단계: 층위 대비도·유구 비교표 작성 완료")};
-    if (m_currentStage >= 6) m_stageTimer->stop();
-    syncUiFromSession(m_currentStage >= 6 ? QString() : labels.value(m_currentStage), qMin(100, m_currentStage * 17));
+    const QStringList labels = {QString(), QStringLiteral("1/4단계: 조사 개요 작성"),
+                                QStringLiteral("2/4단계: 주변유적 현황 작성"),
+                                QStringLiteral("3/4단계: 조사 범위(도형 수) 작성"),
+                                QStringLiteral("4/4단계: 고찰 틀과 부록 작성 완료")};
+    if (m_currentStage >= 4) m_stageTimer->stop();
+    syncUiFromSession(m_currentStage >= 4 ? QString() : labels.value(m_currentStage), qMin(100, m_currentStage * 25));
   });
 
   connect(m_btnRadius500, &QToolButton::clicked, this, [this] { m_btnRadius500->setChecked(true); m_btnRadius1000->setChecked(false); m_radiusMeters = 500.0; refreshFromActiveProject(true); });
@@ -247,9 +245,8 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   connect(m_dbpiaBridge, &KaGeminiBridgeClient::dbpiaPacketReceived, this, [this](const QString& q, int refCount, const QString& preview) {
     m_dbpiaSummary.lastQuery = q; m_dbpiaSummary.roundNumber = m_dbpiaBridge->currentRound();
     m_dbpiaSummary.collectedPapers = m_dbpiaBridge->lastCollectedPapers();
-    updateStepRail(3);
     appendChatMessage(QStringLiteral("문헌 수집"), QStringLiteral("\"%1\" → 신규 %2편 (누적 %3편)\n%4").arg(q).arg(refCount).arg(m_dbpiaSummary.collectedPapers.size()).arg(preview));
-    syncUiFromSession(QStringLiteral("학술문헌 수렴 중: \"%1\" (%2편)").arg(q).arg(m_dbpiaSummary.collectedPapers.size()), 60);
+    syncUiFromSession(QStringLiteral("학술문헌 수집 중: \"%1\" (%2편)").arg(q).arg(m_dbpiaSummary.collectedPapers.size()), 60);
   });
   connect(m_dbpiaBridge, &KaGeminiBridgeClient::dbpiaHarvestCompleted, this, [this](const QJsonArray&, int totalUnique) {
     m_dbpiaSummary.collectedPapers = m_dbpiaBridge->lastCollectedPapers(); m_dbpiaSummary.converged = true;
@@ -257,14 +254,14 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
     m_dbpiaSummary.dbpiaAiTurns.append(QJsonObject{{QStringLiteral("question"), q1}, {QStringLiteral("answer"), m_dbpiaBridge->buildPaperGroundedFallbackAnswer(q1, 1)}});
     m_dbpiaSummary.synthesizedDiscussion = m_dbpiaBridge->buildStructuredDataSynthesis(m_dbpiaSummary.dbpiaAiTurns);
     HwpAcademicVisuals::appendDbpiaAndVisualSummaryToDoc(m_cachedSnap, m_dbpiaSummary, m_session.get());
-    updateStepRail(6);
-    appendChatMessage(QStringLiteral("검증 완료"), totalUnique > 0
+    updateStepRail(4);
+    appendChatMessage(QStringLiteral("수집 완료"), totalUnique > 0
         ? QStringLiteral("학술문헌 %1편 및 층위 대비도·유구 비교표 작성 완료").arg(totalUnique)
         : QStringLiteral("DBpia 수집 문헌 없음(DBpia 응답 없음) — 문헌 표를 임의로 채우지 않았습니다."));
     syncUiFromSession(QString(), 100);
   });
 
-  updateStepRail(6);
+  updateStepRail(4);
   refreshFromActiveProject(true);
 }
 

@@ -124,6 +124,26 @@ class TestUiTerms : public QObject {
     }
     QVERIFY2(hits.isEmpty(), qUtf8Printable(hits.join(QLatin1Char('\n'))));
   }
+
+  // 보고서 창은 실제로 하지 않는 일을 했다고 보여 주지 않는다(설계도 2절 「가짜 진행 표시」).
+  // 지금 앱에는 사실·인용 교차검증도, 학술문헌 수렴도 없다. 생기면 이 목록에서 뺀다.
+  void reportWindowClaimsOnlyWhatItDoes() {
+    const QString root = QString::fromUtf8(KA_SOURCE_DIR);
+    const QStringList notDone = {QStringLiteral("교차검증"), QStringLiteral("수렴")};
+    QStringList hits;
+    QDirIterator it(root + QStringLiteral("/src/app"), {QStringLiteral("KaHwpReportStudio*.cpp")}, QDir::Files);
+    while (it.hasNext()) {
+      const QString path = it.next();
+      QFile file(path);
+      QVERIFY(file.open(QIODevice::ReadOnly));
+      const QStringList lines = QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
+      for (int n = 0; n < lines.size(); ++n)
+        for (const QString& text : literalsOf(lines.at(n)))
+          for (const QString& word : notDone)
+            if (text.contains(word)) hits << QStringLiteral("%1:%2 [%3] %4").arg(path.mid(root.size() + 1)).arg(n + 1).arg(word, text.left(50));
+    }
+    QVERIFY2(hits.isEmpty(), qUtf8Printable(hits.join(QLatin1Char('\n'))));
+  }
 };
 
 QTEST_GUILESS_MAIN(TestUiTerms)

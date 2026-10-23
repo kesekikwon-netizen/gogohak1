@@ -13,10 +13,8 @@
 void KaHwpReportStudio::updateStepRail(int activeStep) {
   if (!m_stepList) return;
   m_stepList->clear();
-  const QStringList steps = {
-      QStringLiteral("1. 근거 확정 (GIS 최단거리·방위)"), QStringLiteral("2. 보고서 원문 대조"),
-      QStringLiteral("3. 학술문헌 수렴 (DBpia)"),         QStringLiteral("4. 사실·인용 교차검증 (G·R·L)"),
-      QStringLiteral("5. 본문·각주·연관성 집필"),         QStringLiteral("6. 층위 대비도·비교표 작성")};
+  const QStringList steps = {QStringLiteral("1. 조사 개요 작성 (GIS 값)"), QStringLiteral("2. 주변유적 현황 작성"),
+                             QStringLiteral("3. 조사 범위(도형 수) 작성"), QStringLiteral("4. 고찰 틀과 부록 작성")};
   for (int i = 0; i < steps.size(); ++i)
     m_stepList->addItem(((i + 1 < activeStep) ? QStringLiteral("✓ ")
                                               : ((i + 1 == activeStep) ? QStringLiteral("• ") : QStringLiteral("○ "))) +
@@ -124,7 +122,6 @@ void KaHwpReportStudio::startDbpiaResearch(const QString& customTopic) {
   if (!customTopic.trimmed().isEmpty()) ledger.dbpiaQueries.prepend(customTopic.trimmed());
   if (ledger.dbpiaQueries.isEmpty())
     ledger.dbpiaQueries = {m_cachedSnap.regionName + QStringLiteral(" 발굴조사 유구 편년")};
-  updateStepRail(3);
   m_dbpiaBridge->startResearchAndEvaluate(customTopic, ledger, qRound(m_radiusMeters),
                                           m_isThesisMode ? QStringLiteral("thesis") : QStringLiteral("report"), false);
 }

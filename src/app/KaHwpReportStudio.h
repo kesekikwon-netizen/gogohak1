@@ -58,7 +58,7 @@ class KaHwpReportStudio : public QDialog {
   HwpAcademicVisuals::DbpiaSummary m_dbpiaSummary;
   KaHwpLivePaperWindow* m_liveWindow = nullptr;
   QTimer* m_stageTimer = nullptr;
-  int m_currentStage = 6;
+  int m_currentStage = 4;
 
   QLabel* m_summaryLabel = nullptr;
   QLabel* m_connStatusLabel = nullptr;
