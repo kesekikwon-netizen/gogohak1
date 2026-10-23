@@ -76,6 +76,7 @@ class TestHwpSurveyReport : public QObject {
     QVERIFY(QFileInfo::exists(hwpPath));
     QVERIFY(QFileInfo(hwpPath).size() > 512);
 
+    // 기존 양식(.hwpx) 불러오기 + 누름틀 필드 치환, 이어서 사용자 요청(프롬프트) 반영 + 일괄 치환 검증
     HwpSurveyReportService::SurveySnapshot updated = snap;
     updated.surveyTitle = QStringLiteral("부여 관북리 유적 정밀발굴조사 (수정본)");
     HwpSurveyReportService::ReportDocumentSession tplSession;
