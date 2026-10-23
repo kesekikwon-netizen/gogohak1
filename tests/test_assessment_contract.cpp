@@ -86,6 +86,7 @@ class TestAssessmentContract : public QObject {
     QCOMPARE(facts.value("cards").toArray().size(), 1);
     QCOMPARE(facts.value("cards").toArray().at(0).toObject().value("id").toString(), QStringLiteral("G1"));
     const QJsonObject s0 = facts.value("sites").toArray().at(0).toObject();
+    QCOMPARE(s0.value("id").toString(), QStringLiteral("S1"));
     QCOMPARE(s0.value("name").toString(), QStringLiteral("경주 황남동 유적"));
     QCOMPARE(s0.value("heritageCode").toString(), QStringLiteral("EX1"));
     QCOMPARE(s0.value("permitNo").toString(), QStringLiteral("2019-12"));
@@ -94,6 +95,8 @@ class TestAssessmentContract : public QObject {
     const QJsonArray locked = facts.value("uncollected").toArray();
     QCOMPARE(locked.size(), 2);
     QCOMPARE(locked.at(0).toString(), QStringLiteral("soil"));
+    // GIS 번호(G 카드, S 유적)는 평가서가 인용할 수 있는 번호다.
+    QCOMPARE(gisIdsOf(facts), (QStringList{QStringLiteral("G1"), QStringLiteral("S1")}));
     // 같은 입력이면 같은 JSON이다(기록·비교용).
     QCOMPARE(QJsonDocument(facts).toJson(), QJsonDocument(factsBundle(ledger, snap)).toJson());
   }
@@ -152,6 +155,17 @@ class TestAssessmentContract : public QObject {
     QVERIFY(validateAssessment(result({claim(QStringLiteral("해발 42m 평탄지다."), QStringLiteral("inference"), {QStringLiteral("E1")})}), ev, {}).isEmpty());
   }
 
+  void gisNumbersCanBeCited() {
+    const QJsonArray ev{evidence(QStringLiteral("E1"))};
+    const QStringList gis{QStringLiteral("G1"), QStringLiteral("S1")};
+    const QJsonObject ok = result({claim(QStringLiteral("조사구역 면적은 1840㎡이다."), QStringLiteral("fact"), {QStringLiteral("G1")}),
+                                   claim(QStringLiteral("공식 서지가 있다."), QStringLiteral("fact"), {QStringLiteral("S1"), QStringLiteral("E1")})});
+    QVERIFY(validateAssessment(ok, ev, {}, gis).isEmpty());
+    // GIS 번호를 알려 주지 않으면 인용할 수 없다.
+    QVERIFY(anyContains(validateAssessment(ok, ev, {}), QStringLiteral("G1")));
+    QVERIFY(anyContains(validateAssessment(result({claim(QStringLiteral("없는 GIS 번호"), QStringLiteral("fact"), {QStringLiteral("G9")})}), ev, {}, gis), QStringLiteral("G9")));
+  }
+
   void figuresMustBeLabeledAndGrounded() {
     const QJsonArray ev{evidence(QStringLiteral("E1"))};
     QJsonObject r = result({claim(QStringLiteral("층위 순서를 모식도로 보인다."), QStringLiteral("inference"), {QStringLiteral("E1")})});
@@ -185,7 +199,7 @@ class TestAssessmentContract : public QObject {
       for (const QJsonValue& v : factsDoc.object().value("uncollected").toArray()) out << v.toString();
       return out;
     }();
-    const QStringList problems = validateAssessment(assessmentDoc.object(), evidenceDoc.array(), locked);
+    const QStringList problems = validateAssessment(assessmentDoc.object(), evidenceDoc.array(), locked, gisIdsOf(factsDoc.object()));
     QVERIFY2(problems.isEmpty(), qUtf8Printable(problems.join(QLatin1Char('\n'))));
     for (const char* key : {"schemaVersion", "survey", "cards", "sites", "uncollected"}) QVERIFY(factsDoc.object().contains(QLatin1String(key)));
   }

@@ -17,11 +17,11 @@ description: The agreed design for Strata's pre-survey assessment (시굴 전 �
 7. 앱 안 DBpia 직접 호출(`KaGeminiBridgeClient`)은 화면에서 숨기고 코드는 둔다. 수집은 DBpia AI를 통해서만, 현장에서는 저장소만 읽는다.
 
 ## 계약 세 가지 (JSON)
-사실 묶음(앱 → SDK, Ledger), 근거 항목(저장소 → SDK: `id`, `siteRef`, `kind`, `source`, `page`, `text`, `status`), 평가 결과(SDK → 앱: `sections[].claims[]{text, evidenceIds, type}`, `figures[]`, `gaps[]`). 자세한 모양은 정본 6절. 상태 네 가지: 동일 보고서 확인 / 참고 / 스캔본 / 미수록.
+사실 묶음(앱 → SDK, Ledger), 근거 항목(저장소 → SDK: `id`, `siteRef`, `kind`, `source`, `page`, `text`, `status`), 평가 결과(SDK → 앱: `sections[].claims[]{text, evidenceIds, type}`, `figures[]`, `gaps[]`). 자세한 모양은 정본 6절. 문장이 인용하는 번호는 `E`(보고서·논문 근거), `G`(GIS 카드), `S`(GIS 유적 기록). 상태 네 가지: 동일 보고서 확인 / 참고 / 스캔본 / 미수록.
 
 ## 지금 할 수 있는 것, 막힌 것 (2026-10-23)
 - **막힘**: Antigravity SDK 구현(토큰이 다 되어 며칠), RAG 수집(다른 터미널이 진행 중이라 건드리지 않음). 경주 독립 DB는 앱이 아직 읽지 않는다.
-- **끝남**: M0 글자 정리(개발 용어 37곳, 자리표시자, 장식 문자)와 `ui_terms` 금지어 시험, M1 계약 코드 `src/core/AssessmentContract.{h,cpp}`(사실 묶음 `factsBundle`, 근거 항목 `validateEvidenceItem`, 평가 결과 `validateAssessment`) + 시험 `assessment_contract` + 샘플 `docs/design/2026-10-23-survey-assessment/samples/`. SDK 결과는 반드시 `validateAssessment`를 통과해야 앱에 쓴다.
+- **끝남**: M0 글자 정리(개발 용어 37곳, 자리표시자, 장식 문자)와 `ui_terms` 금지어 시험, M1 계약 코드 `src/core/AssessmentContract.{h,cpp}`(사실 묶음 `factsBundle`, 근거 항목 `validateEvidenceItem`, 평가 결과 `validateAssessment`, `gisIdsOf`) + 뼈대 `src/core/AssessmentSkeleton.{h,cpp}`(AI 없이 요약·조사구역 개요·주변유적·유적별 근거·부족한 자료·참고문헌을 쓴다, 시험 `assessment_skeleton`) + 시험 `assessment_contract` + 샘플 `docs/design/2026-10-23-survey-assessment/samples/`. SDK 결과는 반드시 `validateAssessment`를 통과해야 앱에 쓴다.
 - **할 수 있음 (SDK·수집 없이)**: M0 남은 것(기관 이름 설정화), M3 중 AI 없이 도는 뼈대 평가(0·1·2·3·6·7장)와 사실 묶음을 화면·파일로 내보내기, 출고 검사 연결, 앱 안 DBpia 단추 숨김(M2 일부).
 - 할 일을 고를 때는 정본 11절의 단계 순서(M0 → M1 → …)를 따르고, 막힌 단계는 건너뛴다.
 

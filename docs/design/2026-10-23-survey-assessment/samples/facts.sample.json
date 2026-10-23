@@ -8,7 +8,7 @@
       "value": "142", "unit": "m", "direction": "북서", "distanceMeters": 142, "confidence": "verified" }
   ],
   "sites": [
-    { "name": "예시 유적 A", "dataset": "예시 데이터셋", "distanceM": 142, "direction": "북서", "heritageCode": "EX-0001",
+    { "id": "S1", "name": "예시 유적 A", "dataset": "예시 데이터셋", "distanceM": 142, "direction": "북서", "heritageCode": "EX-0001",
       "featureKey": "", "permitNo": "2019-12", "institution": "예시연구원", "projectName": "예시 사업", "address": "예시 소재지",
       "era": "삼국시대", "presence": "유", "bibliography": { "title": "예시연구원, 2019, 예시 유적 발굴조사보고서", "year": 2019 } }
   ],

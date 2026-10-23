@@ -18,7 +18,11 @@ QStringList validateEvidenceItem(const QJsonObject& item);
 
 // 평가 결과(SDK → 앱)를 검사한다. 모든 사실·추정 문장은 존재하는 근거 번호를 가져야 하고,
 // 잠긴(미수집) 도메인의 수치와 개발 용어, 표시 없는 그림은 막는다. 비어 있으면 통과.
-QStringList validateAssessment(const QJsonObject& result, const QJsonArray& evidence, const QStringList& uncollectedDomains);
+QStringList validateAssessment(const QJsonObject& result, const QJsonArray& evidence, const QStringList& uncollectedDomains,
+                               const QStringList& gisIds = {});
+
+// 사실 묶음이 낸 GIS 번호(G 카드, S 유적). 평가서는 이 번호도 인용할 수 있다.
+QStringList gisIdsOf(const QJsonObject& facts);
 
 // 모식도에 반드시 붙이는 표시.
 QString figureLabel();

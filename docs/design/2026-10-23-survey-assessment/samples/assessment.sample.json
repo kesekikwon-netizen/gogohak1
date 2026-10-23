@@ -4,6 +4,7 @@
     {
       "key": "link", "title": "연계성",
       "claims": [
+        { "text": "조사구역 면적은 1840㎡이다.", "type": "fact", "evidenceIds": ["G1"] },
         { "text": "예시 유적 A의 1호 구덩이에서 토기 조각이 나왔다.", "type": "fact", "evidenceIds": ["E1"] },
         { "text": "조사구역 서쪽에도 같은 시기 유구가 이어질 가능성이 있다.", "type": "inference", "evidenceIds": ["E1", "E2"] },
         { "text": "토양 자료가 없어 확인하지 못했다.", "type": "none", "evidenceIds": [] }

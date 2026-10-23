@@ -259,6 +259,7 @@ add_library(ka_core STATIC
   src/core/NearbyHeritageFields.cpp
   src/core/GisFactHarness.cpp
   src/core/AssessmentContract.cpp
+  src/core/AssessmentSkeleton.cpp
   src/core/GeminiCommandRouter.cpp
   src/core/HwpSurveyReportService.cpp
   src/core/HwpSurveyEvidence.cpp
@@ -368,6 +369,7 @@ add_library(ka_core STATIC
   src/core/NearbyHeritageFields.h
   src/core/GisFactHarness.h
   src/core/AssessmentContract.h
+  src/core/AssessmentSkeleton.h
   src/core/GeminiCommandRouter.h
   src/core/HwpSurveyReportService.h
   src/core/HwpSurveyEvidence.h
@@ -1811,6 +1813,10 @@ if(KA_HGIS_BUILD_TESTS)
   target_link_libraries(ka_assessment_contract_tests PRIVATE ka_core Qt6::Test)
   target_compile_definitions(ka_assessment_contract_tests PRIVATE "KA_SOURCE_DIR=\"${CMAKE_SOURCE_DIR}\"")
   ka_add_qtest(assessment_contract ka_assessment_contract_tests)
+
+  add_executable(ka_assessment_skeleton_tests tests/test_assessment_skeleton.cpp)
+  target_link_libraries(ka_assessment_skeleton_tests PRIVATE ka_core Qt6::Test)
+  ka_add_qtest(assessment_skeleton ka_assessment_skeleton_tests)
 
   add_executable(ka_report_region_tests tests/test_report_region.cpp)
   target_link_libraries(ka_report_region_tests PRIVATE ka_core)

@@ -29,8 +29,9 @@ QStringList lockWords(const QString& domain) {
 
 QString str(const QJsonObject& o, const char* key) { return o.value(QLatin1String(key)).toString().trimmed(); }
 
-QJsonObject siteToJson(const HwpSurveyReportService::SiteEvidenceRow& e) {
-  return QJsonObject{{"name", e.siteName},
+QJsonObject siteToJson(int number, const HwpSurveyReportService::SiteEvidenceRow& e) {
+  return QJsonObject{{"id", QStringLiteral("S%1").arg(number)},
+                     {"name", e.siteName},
                      {"dataset", e.datasetName},
                      {"distanceM", e.distanceMeters},
                      {"direction", e.direction},
@@ -90,7 +91,8 @@ QString figureLabel() { return QStringLiteral("모식도(실측 아님)"); }
 QJsonObject factsBundle(const GisFactHarness::Ledger& ledger, const HwpSurveyReportService::SurveySnapshot& snapshot) {
   const QJsonObject base = GisFactHarness::ledgerToJson(ledger);
   QJsonArray sites;
-  for (const auto& e : snapshot.siteEntries) sites.append(siteToJson(e));
+  int number = 0;
+  for (const auto& e : snapshot.siteEntries) sites.append(siteToJson(++number, e));
   const QString crs = snapshot.surveyCrs.isEmpty() ? ledger.workCrs : snapshot.surveyCrs;
   const double area = snapshot.totalAreaSqm > 0.0 ? snapshot.totalAreaSqm : ledger.surveyAreaM2;
   return QJsonObject{{"schemaVersion", QStringLiteral("1.0")},
@@ -126,9 +128,19 @@ QStringList validateEvidenceItem(const QJsonObject& item) {
   return problems;
 }
 
-QStringList validateAssessment(const QJsonObject& result, const QJsonArray& evidence, const QStringList& uncollectedDomains) {
+QStringList gisIdsOf(const QJsonObject& facts) {
+  QStringList ids;
+  for (const QJsonValue& v : facts.value(QStringLiteral("cards")).toArray()) ids << str(v.toObject(), "id");
+  for (const QJsonValue& v : facts.value(QStringLiteral("sites")).toArray()) ids << str(v.toObject(), "id");
+  ids.removeAll(QString());
+  return ids;
+}
+
+QStringList validateAssessment(const QJsonObject& result, const QJsonArray& evidence, const QStringList& uncollectedDomains,
+                               const QStringList& gisIds) {
   QStringList problems;
   QSet<QString> known, usable;
+  for (const QString& id : gisIds) known.insert(id), usable.insert(id);  // GIS 실측은 그 자체로 쓸 수 있는 근거다.
   for (const QJsonValue& v : evidence) {
     const QJsonObject e = v.toObject();
     known.insert(str(e, "id"));
