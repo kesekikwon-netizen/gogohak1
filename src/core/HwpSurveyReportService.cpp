@@ -91,12 +91,12 @@ SurveySnapshot ReportDocumentSession::collectFromProject(QgsProject* project, bo
   }
   populateRagEvidence(&snap, enableRagSlot);
   if (enableRagSlot && ragSlot) snap.ragCitationSlotText = ragSlot(snap);
-  else if (!enableRagSlot) snap.ragCitationSlotText = QStringLiteral("[RAG 연결 슬롯 대기 중 — 로컬 발굴조사보고서 인덱싱 완료 후 자동 인용 연결]");
+  else if (!enableRagSlot) snap.ragCitationSlotText = QStringLiteral("보고서 근거: 자료 없음(보고서 색인이 아직 연결되지 않았습니다)");
   return snap;
 }
 
 bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QString* errorOut, int maxStage) {
-  if (!m_impl || !m_impl->doc) return errorOut ? (*errorOut = QStringLiteral("OpenHwpSDK 초기화 실패"), false) : false;
+  if (!m_impl || !m_impl->doc) return errorOut ? (*errorOut = QStringLiteral("한글 문서 엔진을 시작하지 못했습니다"), false) : false;
   SurveySnapshot s = snap;
   if (s.siteEntries.isEmpty() && !s.nearbySites.isEmpty()) populateRagEvidence(&s, false);
   HWPSDK::Document* doc = m_impl->doc;
@@ -105,7 +105,7 @@ bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QStr
   insertStyledParagraph(doc, QStringLiteral("%1 문화재 발굴(시굴)조사 보고서").arg(s.surveyTitle), 1800, true, 3);
   insertStyledParagraph(doc, QStringLiteral("〈일러두기〉 (동국문화재연구원 보고서 작성 기준)\n1. 도면 방위는 조사 당시 자북(磁北) 기준이며, 토층·단면 수치는 해발고도(m)를 나타낸다.\n2. 도면 축소비율은 유구배치도 1/200, 수혈·건물지 평단면도 1/20·1/40(구상유구 1/80), 유물 실측도 1/3을 기본으로 한다.\n3. 유물 일련번호는 유구별 토기류→기와류→기타 순으로 부여하고 토색·색조는 『新版 標準土色帖』(2007판)을 기준으로 한다."), 920, false, 0);
   insertStyledParagraph(doc, QStringLiteral("Ⅰ. 머리말 (조사경위·조사단 구성·발굴조사 요약)"), 1300, true, 1);
-  insertStyledParagraph(doc, QStringLiteral("1. 조사명: %1\n2. 조사면적: %2 (%3개 구역)\n3. 작업좌표계: %4\n4. 지역 보고서 RAG: %5 %6권(본문 %7 · 스캔 %8)").arg(s.surveyTitle, areaStr).arg(s.surveyPolygonCount).arg(s.surveyCrs, s.regionName).arg(s.regionTotalReports).arg(s.regionTextReports).arg(s.regionScanReports), 1000, false, 0);
+  insertStyledParagraph(doc, QStringLiteral("1. 조사명: %1\n2. 조사면적: %2 (%3개 구역)\n3. 작업좌표계: %4\n4. 지역 보고서: %5 %6권(본문 %7 · 스캔 %8)").arg(s.surveyTitle, areaStr).arg(s.surveyPolygonCount).arg(s.surveyCrs, s.regionName).arg(s.regionTotalReports).arg(s.regionTextReports).arg(s.regionScanReports), 1000, false, 0);
   bindField(doc, u"조사명", u"SURVEY_NAME", s.surveyTitle), bindField(doc, u"조사면적", u"SURVEY_AREA_M2", areaStr), bindField(doc, u"좌표계", u"SURVEY_CRS", s.surveyCrs);
   if (maxStage <= 1) return true;
 
@@ -124,11 +124,11 @@ bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QStr
   }
   QVector<QStringList> statusRows = {
       {QStringLiteral("상태"), QStringLiteral("뜻"), QStringLiteral("행 수")},
-      {QStringLiteral("✓"), QStringLiteral("GIS 서지와 같은 보고서 확인"), QString::number(cVerified)},
+      {QStringLiteral("✓"), QStringLiteral("공식 서지와 같은 보고서 확인"), QString::number(cVerified)},
       {QStringLiteral("△"), QStringLiteral("다른 보고서/같은 동·리 참고(연장 단정 유보)"), QString::number(cReference)},
       {QStringLiteral("◌"), QStringLiteral("스캔본(수동 대조 필요)"), QString::number(cScan)},
-      {QStringLiteral("○"), QStringLiteral("로컬 RAG 미수록(서지는 있음)"), QString::number(cRagMissing)},
-      {QStringLiteral("○"), QStringLiteral("GIS 서지 없음"), QString::number(cGisMissing)},
+      {QStringLiteral("○"), QStringLiteral("보고서 미수록(서지는 있음)"), QString::number(cRagMissing)},
+      {QStringLiteral("○"), QStringLiteral("공식 서지 없음"), QString::number(cGisMissing)},
   };
   if (cPending > 0)
     statusRows.push_back({QStringLiteral("○"), QStringLiteral("로컬 PDF 색인 전"), QString::number(cPending)});
@@ -141,13 +141,13 @@ bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QStr
     const QString meta = e.institution.isEmpty() ? QString() : QStringLiteral(" / %1").arg(e.institution);
     QStringList facts;
     if (!e.heritageCode.isEmpty()) facts << QStringLiteral("유산코드 %1").arg(e.heritageCode);
-    else if (!e.featureKey.isEmpty()) facts << QStringLiteral("피처 %1").arg(e.featureKey);
+    else if (!e.featureKey.isEmpty()) facts << QStringLiteral("도형 %1").arg(e.featureKey);
     if (!e.projectName.isEmpty()) facts << QStringLiteral("사업명 %1").arg(e.projectName);
     if (!e.eraField.isEmpty()) facts << QStringLiteral("시대 %1").arg(e.eraField);
     if (!e.heritagePresence.isEmpty()) facts << QStringLiteral("유적유무 %1").arg(e.heritagePresence);
     if (!e.permitNumber.isEmpty()) facts << QStringLiteral("허가번호 %1").arg(e.permitNumber);
     if (!e.siteAddress.isEmpty()) facts << QStringLiteral("소재지 %1").arg(e.siteAddress);
-    insertStyledParagraph(doc, QStringLiteral("(%1) %2 [조사구역 경계 기준 %3 %4m]\n  • GIS 서지: %5%6\n  • GIS 원자료: %7\n  • 층위·유구: %8 / %9\n  • ⑤ 조사구역과의 연관성: %10")
+    insertStyledParagraph(doc, QStringLiteral("(%1) %2 [조사구역 경계 기준 %3 %4m]\n  • 공식 서지: %5%6\n  • GIS 원자료: %7\n  • 층위·유구: %8 / %9\n  • ⑤ 조사구역과의 연관성: %10")
                                    .arg(i + 1).arg(e.siteName, e.direction).arg(e.distanceMeters)
                                    .arg(bib.isEmpty() ? QStringLiteral("서지 없음") : bib, meta)
                                    .arg(facts.isEmpty() ? QStringLiteral("기재 없음") : facts.join(QStringLiteral(" · ")),
@@ -168,7 +168,7 @@ bool ReportDocumentSession::buildStandardReport(const SurveySnapshot& snap, QStr
   bindField(doc, u"RAG인용슬롯", u"RAG_CITATION_SLOT", s.ragCitationSlotText);
   if (maxStage > 3) {
     insertStyledParagraph(doc, QStringLiteral("부록 <표 1-2> 반경 %1m 주변유적 전체 목록").arg(qRound(s.radiusMeters)), 1200, true, 1);
-    insertStyledParagraph(doc, QStringLiteral("※ 전체 %1행. 같은 이름의 도형도 합치지 않았고, 유산코드가 없으면 피처ID로 구분했습니다. ○는 보고서 부재가 아니라 이 PC의 로컬 RAG·PDF에 원문이 없다는 뜻입니다.").arg(s.siteEntries.size()), 900, false, 0);
+    insertStyledParagraph(doc, QStringLiteral("※ 전체 %1행. 같은 이름의 도형도 합치지 않았고, 유산코드가 없으면 도형 번호로 구분했습니다. ○는 보고서 부재가 아니라 이 PC의 보고서 파일에 원문이 없다는 뜻입니다.").arg(s.siteEntries.size()), 900, false, 0);
     appendTableToModel(doc, Detail::buildSiteTableRows(s, 0));
   }
   return true;
@@ -229,7 +229,7 @@ bool ReportDocumentSession::applyUserRequest(const QString& userPrompt, const Su
   insertStyledParagraph(m_impl->doc, gen, 1000, false, 0);
   if (rows.size() > 1) appendTableToModel(m_impl->doc, rows);
   setFieldValue(QStringLiteral("DISCUSSION_BODY"), snap.discussionDraft + QStringLiteral("\n") + gen);
-  if (replyOut) *replyOut = QStringLiteral("지역(%1) 기준 RAG 원문 %2건을 분류·반영했습니다.").arg(QString::fromStdString(regScope)).arg(hits.size());
+  if (replyOut) *replyOut = QStringLiteral("지역(%1) 기준 보고서 원문 %2건을 분류·반영했습니다.").arg(QString::fromStdString(regScope)).arg(hits.size());
   return true;
 }
 
@@ -270,7 +270,7 @@ QString ReportDocumentSession::renderPreviewHtml(const QString& liveStageLabel, 
   for (const auto& tbl : model.tables) if (tbl.anchor_para < 0 || tbl.anchor_para >= static_cast<int>(model.paragraphs.size())) html += renderTableHtml(tbl);
   if (!extraVisualsHtml.isEmpty()) html += extraVisualsHtml;
   if (showFieldMarks && !model.fields.empty()) {
-    html += QStringLiteral("<div style='margin-top:14px;padding:8px;background:#F3EFE8;border:1px dashed #B5573A;font-size:8.4pt;color:#4B4842;'><b style='color:#B5573A;'>⟪누름틀⟫</b> ");
+    html += QStringLiteral("<div style='margin-top:14px;padding:8px;background:#F3EFE8;border:1px dashed #B5573A;font-size:8.4pt;color:#4B4842;'><b style='color:#B5573A;'>⟪양식 칸⟫</b> ");
     for (const auto& f : model.fields) html += QStringLiteral("<b>⟪%1⟫</b> %2 &nbsp; ").arg(QString::fromStdString(f.name_utf8).toHtmlEscaped(), QString::fromStdString(f.text_utf8).toHtmlEscaped());
     html += QStringLiteral("</div>");
   }

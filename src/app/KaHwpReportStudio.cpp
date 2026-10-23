@@ -50,7 +50,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   leftHead->addStretch(1);
   m_btnRadius500 = makeCheckBtn(leftPane, QStringLiteral("500m"), true);
   m_btnRadius1000 = makeCheckBtn(leftPane, QStringLiteral("1000m"), false);
-  m_ragSlotCheck = new QCheckBox(QStringLiteral("보고서 원문(RAG)"), leftPane);
+  m_ragSlotCheck = new QCheckBox(QStringLiteral("보고서 원문"), leftPane);
   m_ragSlotCheck->setChecked(true);
   leftHead->addWidget(m_btnRadius500);
   leftHead->addWidget(m_btnRadius1000);
@@ -186,9 +186,9 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   rightL->addWidget(new QLabel(QStringLiteral("진행 기록"), rightPane));
   m_chatView = new QTextBrowser(rightPane);
   rightL->addWidget(m_chatView, 2);
-  rightL->addWidget(new QLabel(QStringLiteral("한글 누름틀(Field) 편집"), rightPane));
+  rightL->addWidget(new QLabel(QStringLiteral("한글 양식 칸 편집"), rightPane));
   m_fieldTable = new QTableWidget(0, 2, rightPane);
-  m_fieldTable->setHorizontalHeaderLabels({QStringLiteral("누름틀"), QStringLiteral("값")});
+  m_fieldTable->setHorizontalHeaderLabels({QStringLiteral("양식 칸"), QStringLiteral("값")});
   m_fieldTable->verticalHeader()->setVisible(false);
   m_fieldTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
   m_fieldTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
@@ -220,7 +220,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
     m_session->buildStandardReport(m_cachedSnap, nullptr, qMin(4, m_currentStage));
     updateStepRail(m_currentStage);
     const QStringList labels = {QString(), QStringLiteral("1/6단계: GIS 조사구역·최단거리 확정"),
-                                QStringLiteral("2/6단계: 발굴조사보고서 RAG 원문·층위 대조"),
+                                QStringLiteral("2/6단계: 발굴조사보고서 원문·층위 대조"),
                                 QStringLiteral("3/6단계: 학술문헌 서지 확인"),
                                 QStringLiteral("4/6단계: 사실·인용 교차검증"),
                                 QStringLiteral("5/6단계: Ⅱ장 유적별 현황·연관성 집필"),
@@ -260,7 +260,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
     updateStepRail(6);
     appendChatMessage(QStringLiteral("검증 완료"), totalUnique > 0
         ? QStringLiteral("학술문헌 %1편 및 층위 대비도·유구 비교표 작성 완료").arg(totalUnique)
-        : QStringLiteral("DBpia 수집 문헌 없음(Antigravity SDK/DBpia 응답 없음) — 문헌 표를 임의로 채우지 않았습니다."));
+        : QStringLiteral("DBpia 수집 문헌 없음(DBpia 응답 없음) — 문헌 표를 임의로 채우지 않았습니다."));
     syncUiFromSession(QString(), 100);
   });
 

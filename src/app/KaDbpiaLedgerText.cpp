@@ -9,7 +9,7 @@ QString KaGeminiBridgeClient::buildPaperGroundedFallbackAnswer(const QString& qu
                   QStringLiteral("- **질의 Q%1**: %2").arg(turnIndex).arg(question)};
   if (m_collectedPapers.isEmpty()) {
     out << QStringLiteral(
-        "- **수집 문헌 없음**: Antigravity SDK/DBpia 응답을 받지 못했습니다. "
+        "- **수집 문헌 없음**: DBpia 응답을 받지 못했습니다. "
         "수집되지 않은 문헌·요약을 임의로 만들지 않았습니다.");
     return out.join(QLatin1Char('\n'));
   }
@@ -64,7 +64,7 @@ QString KaGeminiBridgeClient::buildStructuredDataSynthesis(const QJsonArray& dbp
   if (m_collectedPapers.isEmpty()) {
     out << QString()
         << QStringLiteral(
-               "- **DBpia 수집 문헌 없음**: Antigravity SDK/DBpia 응답을 받지 못한 상태입니다. "
+               "- **DBpia 수집 문헌 없음**: DBpia 응답을 받지 못한 상태입니다. "
                "표와 고찰을 수집되지 않은 문헌으로 채우지 않았습니다.");
     return out.join(QLatin1Char('\n'));
   }

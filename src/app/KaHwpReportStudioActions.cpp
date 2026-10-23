@@ -14,7 +14,7 @@ void KaHwpReportStudio::updateStepRail(int activeStep) {
   if (!m_stepList) return;
   m_stepList->clear();
   const QStringList steps = {
-      QStringLiteral("1. 근거 확정 (GIS 최단거리·방위)"), QStringLiteral("2. 보고서 원문 대조 (RAG)"),
+      QStringLiteral("1. 근거 확정 (GIS 최단거리·방위)"), QStringLiteral("2. 보고서 원문 대조"),
       QStringLiteral("3. 학술문헌 수렴 (DBpia)"),         QStringLiteral("4. 사실·인용 교차검증 (G·R·L)"),
       QStringLiteral("5. 본문·각주·연관성 집필"),         QStringLiteral("6. 층위 대비도·비교표 작성")};
   for (int i = 0; i < steps.size(); ++i)
@@ -37,7 +37,7 @@ void KaHwpReportStudio::populateEvidenceTable() {
                                                : (e.hasLocalPdf ? QStringLiteral("○ 색인 전")
                                                                 : (e.bibliography.trimmed().isEmpty()
                                                                        ? QStringLiteral("○ 서지 없음")
-                                                                       : QStringLiteral("○ RAG 미수록")))));
+                                                                       : QStringLiteral("○ 보고서 미수록")))));
     const QStringList cols = {QString::number(i + 1),
                               e.siteName,
                               QStringLiteral("%1m").arg(e.distanceMeters),
@@ -77,7 +77,7 @@ void KaHwpReportStudio::onSiteRowSelected(int row) {
   m_siteDetailView->setHtml(
       QStringLiteral("<div style='font-size:8.6pt;line-height:1.55;color:#1F1E1B;'>"
                      "<b>[%1]</b> 조사구역 경계 기준 <b>%2 %3m</b> · 원문: <b>%4</b><br/>"
-                     "• <b>GIS 공식 서지:</b> %5%6<br/>"
+                     "• <b>공식 서지:</b> %5%6<br/>"
                      "• <b>층위·토층(③):</b> %7<br/>• <b>유구·시대(④):</b> [%8] %9<br/>"
                      "• <b style='color:#B5573A;'>⑤ 조사구역과의 연관성:</b> %10</div>")
           .arg(e.siteName.toHtmlEscaped(), e.direction.toHtmlEscaped())
@@ -109,7 +109,7 @@ void KaHwpReportStudio::refreshFromActiveProject(bool forceReload) {
                               .arg(qRound(m_radiusMeters))
                               .arg(m_cachedSnap.siteEntries.size()));
   m_connStatusLabel->setText(
-      QStringLiteral("연결 상태 — 발굴조사보고서 RAG(%1): 총 %2권 (본문 %3권 · 스캔 %4권) | DBpia 문헌: %5편")
+      QStringLiteral("연결 상태 — 발굴조사보고서(%1): 총 %2권 (본문 %3권 · 스캔 %4권) | DBpia 문헌: %5편")
           .arg(m_cachedSnap.regionName.isEmpty() ? QStringLiteral("경주시") : m_cachedSnap.regionName)
           .arg(m_cachedSnap.regionTotalReports)
           .arg(m_cachedSnap.regionTextReports)
@@ -188,7 +188,7 @@ void KaHwpReportStudio::onOpenTemplateClicked() {
   if (!path.isEmpty() && !m_session->openTemplateAndFill(std::filesystem::path(path.toStdString()), m_cachedSnap, &err))
     QMessageBox::warning(this, QStringLiteral("양식 열기 실패"), err);
   else if (!path.isEmpty())
-    syncUiFromSession(QStringLiteral("기관 한글 양식 누름틀 자동 기입 완료"), 100);
+    syncUiFromSession(QStringLiteral("기관 한글 양식 칸 자동 기입 완료"), 100);
 }
 
 void KaHwpReportStudio::onSaveHwpxClicked() {
@@ -213,7 +213,7 @@ void KaHwpReportStudio::onFieldCellChanged(int row, int column) {
   if (m_updatingTable || column != 1) return;
   QTableWidgetItem *nameItem = m_fieldTable->item(row, 0), *valItem = m_fieldTable->item(row, 1);
   if (nameItem && valItem && m_session->setFieldValue(nameItem->text(), valItem->text()))
-    syncUiFromSession(QStringLiteral("누름틀 갱신: ") + nameItem->text(), 100);
+    syncUiFromSession(QStringLiteral("양식 칸 갱신: ") + nameItem->text(), 100);
 }
 
 void KaHwpReportStudio::syncUiFromSession(const QString& liveStageLabel, int progressPercent) {

@@ -46,7 +46,7 @@ class TestHwpSurveyReport : public QObject {
     const QString html = session.renderPreviewHtml();
     QVERIFY(html.contains(QStringLiteral("경주 황남동 120번지 유적 시굴조사")));
     QVERIFY(html.contains(QStringLiteral("경주 황남대총")));
-    QVERIFY(html.contains(QStringLiteral("RAG 연결 슬롯 대기 중")));
+    QVERIFY(html.contains(QStringLiteral("보고서 근거: 자료 없음")));
   }
 
   void writeAndReloadHwpxAndHwp5() {
@@ -121,7 +121,7 @@ class TestHwpSurveyReport : public QObject {
     for (const auto& row : snap.siteEntries) {
       QCOMPARE(row.reportStatus, QStringLiteral("○"));
       QVERIFY(!row.bibliography.isEmpty());
-      QVERIFY(row.relationToSurvey.contains(QStringLiteral("GIS 공식 서지")));
+      QVERIFY(row.relationToSurvey.contains(QStringLiteral("공식 서지")));
       QVERIFY(row.reportYear > 0);
     }
     QCOMPARE(snap.siteEntries[0].reportYear, 2019);
@@ -200,8 +200,8 @@ class TestHwpSurveyReport : public QObject {
     QVERIFY(rows[2][2].contains(QStringLiteral("fid-42")));
     QCOMPARE(HwpSurveyReportService::Detail::buildSiteTableRows(snap, 2).size(), 3);
     const QString summary = HwpSurveyReportService::Detail::siteStatusSummary(snap);
-    QVERIFY(summary.contains(QStringLiteral("로컬 RAG 미수록")));
-    QVERIFY(summary.contains(QStringLiteral("GIS 서지 없음")));
+    QVERIFY(summary.contains(QStringLiteral("보고서 미수록")));
+    QVERIFY(summary.contains(QStringLiteral("공식 서지 없음")));
     QVERIFY(summary.contains(QStringLiteral("△ 참고")));
   }
 

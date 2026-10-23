@@ -257,7 +257,7 @@ std::vector<LocalReportHit> LocalReportRag::search(std::string_view query_utf8, 
 }
 std::string LocalReportRag::formatPromptContext(std::span<const LocalReportHit> hits) {
   std::ostringstream oss;
-  oss << "## [로컬 발굴조사보고서 RAG 원문 발췌 (" << hits.size() << "건)]\n";
+  oss << "## [발굴조사보고서 원문 발췌 (" << hits.size() << "건)]\n";
   for (std::size_t i = 0; i < hits.size(); ++i)
     oss << "- **[R" << (i + 1) << "] [" << hits[i].sigungu << "] 『" << hits[i].report_name << "』 (p." << hits[i].page_no << ")**: " << hits[i].content << "\n";
   return oss.str();

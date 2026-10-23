@@ -21,7 +21,7 @@ KaHwpLivePaperWindow::KaHwpLivePaperWindow(QWidget* parent)
   auto* btnZoomOut = new QPushButton(QStringLiteral("축소 -"), this);
   m_zoomLabel = new QLabel(QStringLiteral("100%"), this);
   auto* btnZoomIn = new QPushButton(QStringLiteral("확대 +"), this);
-  m_fieldMarkCheck = new QCheckBox(QStringLiteral("누름틀 표시"), this);
+  m_fieldMarkCheck = new QCheckBox(QStringLiteral("양식 칸 표시"), this);
   m_fieldMarkCheck->setChecked(true);
   auto* btnSaveHwpx = new QPushButton(QStringLiteral(".hwpx 저장"), this);
   auto* btnSaveHwp5 = new QPushButton(QStringLiteral(".hwp 저장"), this);
