@@ -56,6 +56,32 @@ ctest --test-dir build -C Release -R '<아래 이름>' --output-on-failure
 
 `save_open_window` · `save_open_topo` · `save_open_drawing` · `save_open_edit` · `save_open_edit_delete` · `save_open_edit_draw` · `save_open_roundtrip` · `save_open_open` · `save_open_open_invalid` · `save_open_commit` · `save_open_saveas` · `save_open_saveas_fail`
 
+## 리눅스에서 돌리기 (2026-10-23 직접 돌려 본 결과)
+
+평소 개발과 시험은 리눅스, 마무리는 Windows다. 폴더 이름에 괄호가 있으면(`hgis (사본)`) CMake가 자동 RCC 단계에서 셸 오류를 내니 괄호 없는 경로에 둔다.
+
+```bash
+cmake --preset linux && cmake --build build-linux --parallel 32     # 첫 빌드 약 1분 반(36코어), 결과는 build-linux/
+ctest --preset linux -j8 --timeout 180 -R '^(바꾼 시험 이름)$'          # 화면 없이(offscreen) 돈다
+```
+
+187개 중 167개가 리눅스에서 통과했다(Qt TIFF 플러그인 `qt6-image-formats-plugins`를 깔면 3개 더). 나머지 20개는 아래처럼 나뉜다(`storage_safety`는 단독 재실행에서 통과해 흔들림으로 분류).
+
+| 구분 | 시험 | 이유 |
+| --- | --- | --- |
+| Windows 전용(`cad_dwg`는 오류 문구로 확인) | `cad_dwg` · `cad_import` | 묶어 둔 DWG 변환기가 Windows `.exe`라 실행되지 않는다(`execve: Permission denied`, `cad_import`는 시간 초과). |
+| | `topographic_settings` | Windows 비밀 저장(DPAPI) 흐름을 시험한다. |
+| | `survey_durability` | Windows Restart Manager(열고 있는 프로그램 확인)를 시험한다. |
+| Windows 전제로 보임(시험 이름·오류로 짐작, 확정 아님) | `survey_facts` · `home_cards` | Windows 경로 표기(`toNativeSeparators`, 네트워크 경로). |
+| | `cad_pending_copies` · `file_cleanup` | 열려 있는 파일을 지우지 못하는 Windows 잠금 동작. |
+| | `perf_engine` · `save_open_monitor` · `theme_qss` | 시간 예산(`startup_home 3320ms > 70ms`)·화면 크기·글꼴 기준이 Windows 기준값이다. |
+| 부하 때 흔들림 | `storage_safety` | 전체 병렬 실행에서만 실패하고 단독 재실행은 통과했다. |
+| 설치하면 풀림 | `georef_engine` · `georef_backup` · `workflow_engine` | `img.save(tif, "TIFF")` 실패: Qt TIFF 플러그인(`qt6-image-formats-plugins`)이 없다. |
+| 진짜 오류(5단계에서 고침) | `ui_terms` | 보고서 창 글자 4곳(`KaHwpReportStudio*.cpp`, `KaHwpLivePaperWindow.cpp`)에 금지된 「조판」이 보인다. Windows에서도 같다. |
+| 원인 미확인 | `longitude_ruler` · `topographic_merge` · `topographic_import` · `dem_legend` | 리눅스 한계인지 코드 문제인지 아직 모른다. Windows CI 결과로 가른다. |
+
+리눅스에서 통과해도 Windows에서 깨질 수 있다(경로·인코딩·WebEngine). Windows 전용 코드를 건드린 변경은 푸시 뒤 Windows CI 초록까지 확인한다. 커밋 전 검사는 `build-linux/`를 증거로 인정하지만 CI는 볼 수 없다.
+
 ## 이 표가 아닌 것
 
 - 사용자 화면 확인(0-4, 5-4 기록).

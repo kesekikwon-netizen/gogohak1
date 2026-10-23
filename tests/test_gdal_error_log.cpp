@@ -14,7 +14,15 @@
 #include <atomic>
 #include <cstdio>
 #include <cstring>
+#ifdef _WIN32
 #include <io.h>
+#else
+#include <unistd.h>
+#define _dup dup
+#define _dup2 dup2
+#define _close close
+#define _fileno fileno
+#endif
 
 namespace {
 

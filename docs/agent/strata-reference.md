@@ -2,6 +2,10 @@
 
 CLAUDE.md에서 옮긴 내용이다(2026-10-03, docs/intent/2026-10-03-dev-setup-gaps.md). CLAUDE.md가 이 문서의 절을 가리킬 때 읽는다.
 
+## 리눅스 첫 빌드 (평소 개발, 2026-10-23)
+
+저장소 루트(경로에 괄호가 없어야 한다)에서: `cmake --preset linux && cmake --build build-linux --parallel 32 --target ka-hgis`. 시험은 `ctest --preset linux -R "^(이름)$"`. 어떤 시험이 리눅스에서 도는지는 docs/testing-map.md의 「리눅스에서 돌리기」. 바탕화면 바로가기와 smoke는 Windows 마무리 단계에서만 한다.
+
 ## 바탕화면 바로가기 (앱 빌드가 성공할 때마다, 사용자의 상시 요청)
 
 Run the smoke, then create or repoint `%USERPROFILE%\Desktop\Strata (개발).lnk` (this PC: `C:\Users\권을\Desktop`; old PC: `C:\Users\kwonyoungin1\Desktop`) with WScript.Shell (`CreateShortcut` + `Save` makes it when missing):

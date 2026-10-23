@@ -13,6 +13,19 @@
         "OSGEO4W_ROOT": "$env{OSGEO4W_ROOT}",
         "KA_HGIS_BUILD_TESTS": "ON"
       }
+    },
+    {
+      "name": "linux",
+      "displayName": "Linux (Ninja, 평소 개발)",
+      "description": "리눅스 개발용. 결과는 build-linux/. 커밋 전 검사가 이 폴더를 증거로 본다.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-linux",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "KA_HGIS_BUILD_TESTS": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -27,6 +40,11 @@
       "displayName": "Debug 빌드",
       "configurePreset": "vs",
       "configuration": "Debug"
+    },
+    {
+      "name": "linux",
+      "displayName": "Linux 빌드",
+      "configurePreset": "linux"
     }
   ],
   "testPresets": [
@@ -35,6 +53,13 @@
       "displayName": "테스트 (Release)",
       "configurePreset": "vs",
       "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "linux",
+      "displayName": "테스트 (Linux)",
+      "configurePreset": "linux",
+      "environment": { "QT_QPA_PLATFORM": "offscreen" },
       "output": { "outputOnFailure": true }
     }
   ]
