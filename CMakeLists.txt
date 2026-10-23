@@ -128,6 +128,10 @@ endif()
 # Pdf: 인쇄는 저장한 도면 PDF를 잘라 찍는다(TilePrint). Qt6Pdf.dll 은 OSGeo4W Qt 에 이미 있다.
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Xml PrintSupport Pdf Network Svg Test Multimedia MultimediaWidgets)
 find_package(Qt6 REQUIRED COMPONENTS WebEngineWidgets)
+# OSGeo4W의 zlib-devel 은 루트의 include/·lib/ 에 들어가, 접두 경로(apps/Qt6)만으로는 찾지 못한다(CI 2026-10-23).
+if(WIN32)
+  set(ZLIB_ROOT "${OSGEO4W_ROOT}")
+endif()
 find_package(ZLIB REQUIRED)
 set(OPENHWP_SDK_ROOT "${CMAKE_SOURCE_DIR}/third_party/OpenHwpSDK" CACHE PATH "OpenHwpSDK root")
 list(APPEND KA_INCLUDES "${OPENHWP_SDK_ROOT}/include" "${OPENHWP_SDK_ROOT}/src")
