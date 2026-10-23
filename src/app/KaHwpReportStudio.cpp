@@ -98,11 +98,13 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   auto* btnViewVerify = makeCheckBtn(centerPane, QStringLiteral("검수"), false);
   auto* btnViewCompare = makeCheckBtn(centerPane, QStringLiteral("비교"), false);
   auto* btnViewDbpia = makeCheckBtn(centerPane, QStringLiteral("DBpia 로그인"), false);
+  auto* btnViewAssess = makeCheckBtn(centerPane, QStringLiteral("평가"), false);
   auto* viewGrp = new QButtonGroup(this);
   viewGrp->addButton(btnViewPaper, 0);
   viewGrp->addButton(btnViewVerify, 1);
   viewGrp->addButton(btnViewCompare, 2);
   viewGrp->addButton(btnViewDbpia, 3);
+  viewGrp->addButton(btnViewAssess, 4);
 
   m_regionCombo = new QComboBox(centerPane);
   m_regionCombo->addItem(QStringLiteral("지역: 자동(조사지역)"), QString());
@@ -128,7 +130,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
 
   for (QWidget* w : {static_cast<QWidget*>(btnDocReport), static_cast<QWidget*>(btnDocThesis),
                      static_cast<QWidget*>(btnViewPaper), static_cast<QWidget*>(btnViewVerify),
-                     static_cast<QWidget*>(btnViewCompare), static_cast<QWidget*>(btnViewDbpia)})
+                     static_cast<QWidget*>(btnViewCompare), static_cast<QWidget*>(btnViewDbpia), static_cast<QWidget*>(btnViewAssess)})
     centerBar->addWidget(w);
   centerBar->addStretch(1);
   centerBar->addWidget(m_regionCombo);
@@ -140,6 +142,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   m_previewView = new QTextBrowser(m_centerStack);
   m_verifyView = new QTextBrowser(m_centerStack);
   m_compareView = new QTextBrowser(m_centerStack);
+  m_assessView = new QTextBrowser(m_centerStack);
   auto* dbpiaPane = new QWidget(m_centerStack);
   auto* dbpiaL = new QVBoxLayout(dbpiaPane);
   dbpiaL->setContentsMargins(0, 0, 0, 0);
@@ -174,6 +177,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   m_centerStack->addWidget(m_verifyView);
   m_centerStack->addWidget(m_compareView);
   m_centerStack->addWidget(dbpiaPane);
+  m_centerStack->addWidget(m_assessView);
   centerL->addWidget(m_centerStack, 1);
 
   auto* rightPane = new QFrame(split);
@@ -234,6 +238,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   connect(m_evidenceTable, &QTableWidget::currentCellChanged, this, [this](int r, int, int, int) { onSiteRowSelected(r); });
   connect(viewGrp, &QButtonGroup::idClicked, this, [this, dbpiaPane, ensureDbpiaWeb](int id) {
     m_centerStack->setCurrentIndex(id);
+    if (id == 4) refreshAssessmentView();
     if (id == 3 && !dbpiaPane->findChild<QWebEngineView*>()) ensureDbpiaWeb(QStringLiteral("https://www.dbpia.co.kr/member/login"));
   });
   connect(docGrp, &QButtonGroup::idClicked, this, [this](int id) { m_isThesisMode = (id == 1); syncUiFromSession(); });

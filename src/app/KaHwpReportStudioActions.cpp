@@ -5,7 +5,6 @@
 #include "KaHwpReportStudio.h"
 #include "KaIcons.h"
 #include "KaTheme.h"
-#include "core/AssessmentSkeleton.h"
 #include "core/GisFactHarness.h"
 #include "core/LocalReportRag.h"
 #include <QtWidgets>
@@ -195,28 +194,6 @@ void KaHwpReportStudio::onSaveHwpxClicked() {
   QString err;
   if (!path.isEmpty() && !m_session->saveAs(std::filesystem::path(path.toStdString()), QStringLiteral("HWPX"), &err))
     QMessageBox::warning(this, QStringLiteral("저장 실패"), err);
-}
-
-// AI 없이 만든 평가 뼈대와 그 바탕 자료(사실 묶음·근거)를 폴더에 저장한다. 나중에 SDK 가 같은 파일을 읽는다.
-void KaHwpReportStudio::onSaveAssessmentClicked() {
-  const GisFactHarness::Ledger ledger = GisFactHarness::buildLedger(QgsProject::instance(), QString(), m_radiusMeters);
-  if (!ledger.ok()) {
-    QMessageBox::warning(this, QStringLiteral("저장 실패"), ledger.error);
-    return;
-  }
-  const QString base = QFileDialog::getExistingDirectory(this, QStringLiteral("평가 자료를 저장할 폴더"), QDir::homePath());
-  if (base.isEmpty()) return;
-  const AssessmentSkeleton::Result result = AssessmentSkeleton::build(ledger, m_cachedSnap);
-  const QStringList problems = AssessmentContract::validateAssessment(result.assessment, result.evidence, ledger.uncollectedDomains,
-                                                                      AssessmentContract::gisIdsOf(result.facts));
-  const QString folder = QDir(base).filePath(QStringLiteral("평가 자료"));
-  QString err;
-  if (!AssessmentSkeleton::writeBundle(folder, result, &err)) {
-    QMessageBox::warning(this, QStringLiteral("저장 실패"), err);
-    return;
-  }
-  appendChatMessage(QStringLiteral("저장"), QStringLiteral("평가 자료를 저장했습니다: %1").arg(QDir::toNativeSeparators(folder)) +
-                                               (problems.isEmpty() ? QString() : QStringLiteral("\n확인할 점 %1건: %2").arg(problems.size()).arg(problems.first())));
 }
 
 void KaHwpReportStudio::onSaveHwp5Clicked() {

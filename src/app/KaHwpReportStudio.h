@@ -40,6 +40,7 @@ class KaHwpReportStudio : public QDialog {
   void onSaveHwpxClicked();
   void onSaveHwp5Clicked();
   void onSaveAssessmentClicked();
+  void refreshAssessmentView();
   void onFieldCellChanged(int row, int column);
   void onSendPromptClicked();
 
@@ -73,6 +74,7 @@ class KaHwpReportStudio : public QDialog {
   QTextBrowser* m_previewView = nullptr;
   QTextBrowser* m_verifyView = nullptr;
   QTextBrowser* m_compareView = nullptr;
+  QTextBrowser* m_assessView = nullptr;
   QComboBox* m_regionCombo = nullptr;
   QComboBox* m_zoomCombo = nullptr;
 

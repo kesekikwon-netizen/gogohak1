@@ -187,6 +187,31 @@ class TestAssessmentSkeleton : public QObject {
     QVERIFY(!error.isEmpty());
   }
 
+  void rendersReadableHtmlWithLabelsAndNumbers() {
+    Fixture f;
+    const Result r = build(f.ledger, f.snap);
+    const QString html = renderHtml(r, {});
+    for (const char* title : {"요약", "조사구역 개요", "반경 안 주변유적", "유적별 근거", "부족한 자료와 확인할 것", "참고문헌"})
+      QVERIFY2(html.contains(QString::fromUtf8(title)), title);
+    QVERIFY(html.contains(QStringLiteral("조사구역 면적은 1840㎡이다.")));
+    QVERIFY(html.contains(QStringLiteral("[G1]")));          // 근거 번호가 보인다
+    QVERIFY(html.contains(QStringLiteral("[E1, S1]")));
+    QVERIFY(html.contains(QStringLiteral("사실")));
+    QVERIFY(html.contains(QStringLiteral("자료 없음")));      // 근거 없는 문장은 이렇게 표시한다
+    QVERIFY(!html.contains(QStringLiteral("확인할 점")));      // 문제가 없으면 경고 칸이 없다
+  }
+
+  void htmlEscapesTextAndShowsProblems() {
+    Fixture f;
+    f.snap.siteEntries[0].siteName = QStringLiteral("<b>위험</b> & 유적");
+    const Result r = build(f.ledger, f.snap);
+    const QString html = renderHtml(r, {QStringLiteral("예시 문제 하나")});
+    QVERIFY(!html.contains(QStringLiteral("<b>위험</b>")));
+    QVERIFY(html.contains(QStringLiteral("&lt;b&gt;위험&lt;/b&gt; &amp; 유적")));
+    QVERIFY(html.contains(QStringLiteral("확인할 점")));
+    QVERIFY(html.contains(QStringLiteral("예시 문제 하나")));
+  }
+
   void sameInputGivesSameOutput() {
     Fixture f;
     const Result a = build(f.ledger, f.snap);

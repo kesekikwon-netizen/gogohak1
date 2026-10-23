@@ -5,6 +5,7 @@
 
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QStringList>
 
 namespace AssessmentSkeleton {
 
@@ -19,5 +20,9 @@ Result build(const GisFactHarness::Ledger& ledger, const HwpSurveyReportService:
 // 세 자료를 폴더에 facts.json, evidence.json, assessment.json 으로 쓴다(SDK 에 넘기는 파일). 폴더가 없으면 만들고,
 // 같은 이름은 덮어쓴다. 쓰는 도중 실패해도 기존 파일은 남는다.
 bool writeBundle(const QString& folder, const Result& result, QString* error = nullptr);
+
+// 평가 결과를 읽기 쉬운 HTML 로 그린다. 문장마다 종류(사실·추정·자료 없음)와 근거 번호를 보인다.
+// problems 가 있으면 맨 위에 「확인할 점」 칸을 둔다. 모든 글자는 HTML 로 이스케이프한다.
+QString renderHtml(const Result& result, const QStringList& problems);
 
 }  // namespace AssessmentSkeleton

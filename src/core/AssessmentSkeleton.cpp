@@ -174,4 +174,30 @@ bool writeBundle(const QString& folder, const Result& result, QString* error) {
   return true;
 }
 
+QString renderHtml(const Result& result, const QStringList& problems) {
+  auto esc = [](const QString& s) { return s.toHtmlEscaped(); };
+  QString html = QStringLiteral("<div style='font-size:10pt;line-height:150%;'>");
+  if (!problems.isEmpty()) {
+    html += QStringLiteral("<div style='border:1px solid #B2402C;padding:6px 10px;margin-bottom:10px;'><b>확인할 점 %1건</b><ul>").arg(problems.size());
+    for (const QString& p : problems) html += QStringLiteral("<li>%1</li>").arg(esc(p));
+    html += QStringLiteral("</ul></div>");
+  }
+  for (const QJsonValue& sv : result.assessment.value(QStringLiteral("sections")).toArray()) {
+    const QJsonObject section = sv.toObject();
+    html += QStringLiteral("<h3 style='margin:14px 0 4px 0;'>%1</h3><ul style='margin-top:0;'>").arg(esc(section.value(QStringLiteral("title")).toString()));
+    for (const QJsonValue& cv : section.value(QStringLiteral("claims")).toArray()) {
+      const QJsonObject c = cv.toObject();
+      const QString type = c.value(QStringLiteral("type")).toString();
+      const QString label = type == QLatin1String("fact") ? QStringLiteral("사실") : (type == QLatin1String("inference") ? QStringLiteral("추정") : QStringLiteral("자료 없음"));
+      QStringList ids;
+      for (const QJsonValue& v : c.value(QStringLiteral("evidenceIds")).toArray()) ids << v.toString();
+      html += QStringLiteral("<li>%1 <span style='color:#7A8480;font-size:8.5pt;'>%2%3</span></li>")
+                  .arg(esc(c.value(QStringLiteral("text")).toString()), label,
+                       ids.isEmpty() ? QString() : QStringLiteral(" · [%1]").arg(esc(ids.join(QStringLiteral(", ")))));
+    }
+    html += QStringLiteral("</ul>");
+  }
+  return html + QStringLiteral("</div>");
+}
+
 }  // namespace AssessmentSkeleton
