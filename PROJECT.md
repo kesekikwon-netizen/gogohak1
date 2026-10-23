@@ -1,6 +1,6 @@
 # Project: ka-hgis (Korean Field Archaeology Desktop HGIS)
 
-> 현재 상태의 짧은 요약이다. 제품 규칙은 `AGENTS.md`, 제품 현황 정본은 `docs/HANDOFF.md`. 이 파일은 2026-09-29 에 코드와 맞췄다(F032).
+> 현재 상태의 짧은 요약이다. 제품 규칙은 `CLAUDE.md`, 제품 현황 정본은 `docs/HANDOFF.md`. 이 파일은 2026-09-29 에 코드와 맞췄다(F032).
 
 ## Architecture
 - Architecture B: Standalone C++20/Qt6 desktop application linked to OSGeo4W `qgis_core` and `qgis_gui`. No QGIS fork; do not reimplement PROJ/GDAL/renderer.
