@@ -19,7 +19,7 @@
 | Total commits | 391 |
 | Upstream | `(none)` |
 | Sync | no upstream configured |
-| Origin | https://github.com/kesekikwon-netizen/hgis.git |
+| Origin | https://github.com/kesekikwon-netizen/gogohak1.git |
 | Working tree dirty | **yes** (6 paths) |
 
 ## How far we are
@@ -70,7 +70,7 @@ M	tests/test_parcel_copy_keys.cpp
 ## Other PC checklist
 
 ```powershell
-git clone https://github.com/kesekikwon-netizen/hgis.git
+git clone https://github.com/kesekikwon-netizen/gogohak1.git
 cd hgis
 git pull
 Get-Content docs\COMMIT_STATUS.md -Head 40

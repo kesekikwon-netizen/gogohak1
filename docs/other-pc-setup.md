@@ -1,6 +1,6 @@
 # 다른 PC에서 바로 개발하기 (Windows)
 
-원격: **https://github.com/kesekikwon-netizen/hgis** · 브랜치: 지금 작업 중인 브랜치(예: `20260922-1`). `main`은 뒤처져 있을 수 있다.  
+원격: **https://github.com/kesekikwon-netizen/gogohak1** · 브랜치: 지금 작업 중인 브랜치(예: `20260922-1`). `main`은 뒤처져 있을 수 있다.  
 DLL 미포함 → 대상 PC에 **OSGeo4W `qgis-dev`** 필요.
 
 ---
@@ -30,7 +30,7 @@ DLL 미포함 → 대상 PC에 **OSGeo4W `qgis-dev`** 필요.
 **다른 PC**
 
 ```powershell
-git clone https://github.com/kesekikwon-netizen/hgis.git
+git clone https://github.com/kesekikwon-netizen/gogohak1.git
 cd hgis
 git checkout 20260922-1                               # 지금 작업 브랜치
 .\scripts\osgeo4w-bundle.ps1 -Import E:\ka-hgis-sdk  # 잠금의 OSGeo 경로. 없으면 -Root
@@ -48,7 +48,7 @@ git checkout 20260922-1                               # 지금 작업 브랜치
 ## 30초 요약 (기준 PC를 처음 만들 때)
 
 ```powershell
-git clone https://github.com/kesekikwon-netizen/hgis.git
+git clone https://github.com/kesekikwon-netizen/gogohak1.git
 cd hgis
 # 최초 1회만 — 관리자 PowerShell 권장 (CMake/VS/OSGeo4W 설치 시도)
 # 다른 PC는 설치 대신 위 「같은 개발 환경 만들기」의 -Import 를 쓴다.
@@ -101,7 +101,7 @@ cd <클론>\hgis
 ### 원클릭
 
 ```powershell
-git clone https://github.com/kesekikwon-netizen/hgis.git
+git clone https://github.com/kesekikwon-netizen/gogohak1.git
 cd hgis
 git checkout 20260922-1   # 지금 작업 브랜치
 git pull

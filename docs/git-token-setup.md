@@ -42,7 +42,7 @@ gh auth setup-git      # git 이 gh 자격 증명을 쓰게 한다
 ## 토큰 발급 기준
 
 - fine-grained personal access token 을 쓴다.
-- 대상 저장소는 `kesekikwon-netizen/hgis` 하나만 고른다.
+- 대상 저장소는 `kesekikwon-netizen/gogohak1` 하나만 고른다.
 - 권한은 Contents = Read and write 만 준다. 필요하면 Pull requests 를 더한다.
 - 만료는 90일로 둔다.
 

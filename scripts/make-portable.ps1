@@ -436,7 +436,7 @@ Visual Studio 설치도 필요 없습니다. Windows 화면 배율과 현재 모
   다른 PC 에서 폴더를 받았으면 PowerShell 에서 이 폴더의 verify-portable-pack.ps1 을 실행해 대조하세요.
 
 제작: 동국문화재연구원  ·  만든이: youngin kwon
-소스: 이 폴더의 source\ka-hgis-source.zip (이 EXE 를 만든 소스). 저장소: https://github.com/kesekikwon-netizen/hgis
+소스: 이 폴더의 source\ka-hgis-source.zip (이 EXE 를 만든 소스). 저장소: https://github.com/kesekikwon-netizen/gogohak1
 "@
 Set-Content -LiteralPath (Join-Path $out "README.txt") -Value $readmeKo -Encoding UTF8
 $guideName = (-join ([char]0xC0AC, [char]0xC6A9, [char]0xBC95)) + '.txt'
