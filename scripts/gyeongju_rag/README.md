@@ -31,9 +31,10 @@ python3 -u scripts/gyeongju_rag/harvest.py
 python3 scripts/gyeongju_rag/build_local.py --force
 ```
 
-## 수집 원리
+## 수집 원리(정책: DBpia AI 통해서만 수집)
 
-`harvest.py`는 DBpia 공개 검색(`www.dbpia.co.kr/api/search/list`)만 사용한다.
+- 정보 수집은 **DBpia AI 통해서만** 한다(무제한 요금제). 공개 검색 API 수집은 중단했다.
+- `harvest.py`는 과거 수집용으로만 보관한다. 새로 돌리지 않는다.
 
 1. 601개 씨앗 질의: 경주 전체, 4읍 8면 10행정동, 44법정동, 142법정리, 핵심 유적 180곳,
    주제 150개, 시대·기관·학술지.
