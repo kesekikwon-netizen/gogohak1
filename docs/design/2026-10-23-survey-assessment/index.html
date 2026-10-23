@@ -1,0 +1,398 @@
+<title>시굴 전 종합 평가 설계도</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 배치: 왼쪽 목차(넓은 화면) + 본문. 도면 모눈 위에 층위 색(토층 갈색·청록·황토)을 쓴다. */
+:root {
+  --bg: #f4f6f5;
+  --surface: #ffffff;
+  --ink: #1b2927;
+  --muted: #55645f;
+  --line: #d3dcd8;
+  --grid: #e6ece9;
+  --accent: #0e6b68;       /* 청록: 앱 · 기본 */
+  --accent-soft: #dcefed;
+  --soil: #8a5a2b;         /* 토층 갈색: 근거 저장소 */
+  --soil-soft: #f1e6d8;
+  --ochre: #a67810;        /* 황토: SDK · 주의 */
+  --ochre-soft: #f6ecd0;
+  --gap: #b2402c;          /* 부족한 자료 */
+  --gap-soft: #f7dfda;
+  --ok: #2d7a46;
+  --ok-soft: #dcf0e2;
+  --font-body: "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101615; --surface: #172120; --ink: #e5eeeb; --muted: #98aaa4; --line: #2b3a37; --grid: #1b2725;
+    --accent: #4fc2bc; --accent-soft: #15302f; --soil: #d4a06a; --soil-soft: #2c2318;
+    --ochre: #e0b650; --ochre-soft: #2f2812; --gap: #ef8a77; --gap-soft: #3a1f1a; --ok: #6fcf8d; --ok-soft: #14301f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101615; --surface: #172120; --ink: #e5eeeb; --muted: #98aaa4; --line: #2b3a37; --grid: #1b2725;
+  --accent: #4fc2bc; --accent-soft: #15302f; --soil: #d4a06a; --soil-soft: #2c2318;
+  --ochre: #e0b650; --ochre-soft: #2f2812; --gap: #ef8a77; --gap-soft: #3a1f1a; --ok: #6fcf8d; --ok-soft: #14301f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  padding-block: 0 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 40px; }
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; padding-top: 32px; font-size: 13px; }
+nav.toc b { display: block; font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+main { min-width: 0; padding-top: 32px; }
+header.top { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 8px; }
+header.top .stamp { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+h1 { font-size: clamp(26px, 4.4vw, 38px); line-height: 1.25; margin: 6px 0 12px; font-weight: 700; text-wrap: balance; }
+.lead { font-size: 17px; max-width: 62ch; margin: 0; }
+section { padding-top: 44px; scroll-margin-top: 12px; }
+h2 { font-size: 22px; margin: 0 0 4px; font-weight: 700; text-wrap: balance; display: flex; align-items: baseline; gap: 10px; }
+h2 small { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-weight: 400; }
+h3 { font-size: 16px; margin: 24px 0 6px; }
+p { margin: 8px 0; max-width: 70ch; }
+.sub { color: var(--muted); margin: 0 0 16px; }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 3px; vertical-align: 1px; white-space: nowrap; }
+.t-app { background: var(--accent-soft); color: var(--accent); }
+.t-store { background: var(--soil-soft); color: var(--soil); }
+.t-sdk { background: var(--ochre-soft); color: var(--ochre); }
+.t-gap { background: var(--gap-soft); color: var(--gap); }
+.t-ok { background: var(--ok-soft); color: var(--ok); }
+.t-todo { background: var(--grid); color: var(--muted); }
+code, .mono { font-family: var(--font-mono); font-size: .88em; }
+code { background: var(--grid); padding: 1px 5px; border-radius: 3px; }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: var(--grid); position: sticky; top: 0; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+pre { margin: 10px 0; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; }
+ul, ol { padding-left: 1.2em; max-width: 70ch; } li { margin: 3px 0; }
+/* 핵심 원칙 */
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+.rule { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+.rule b { display: block; margin-bottom: 4px; }
+.rule span { color: var(--muted); font-size: 14px; }
+/* 사용자 흐름 */
+.flow { list-style: none; padding: 0; margin: 12px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; counter-reset: s; max-width: none; }
+.flow li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 4px; padding: 12px 12px 12px; font-size: 14px; margin: 0; }
+.flow li::before { content: counter(s) "단계"; display: block; font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.flow li.sdk { border-top-color: var(--ochre); }
+/* 구조 그림 */
+.diagram { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 8px; overflow-x: auto; }
+.diagram svg { display: block; min-width: 760px; width: 100%; height: auto; }
+.diagram text { font-family: var(--font-body); fill: var(--ink); font-size: 13px; }
+.diagram .lbl { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.diagram .h { font-weight: 700; font-size: 14px; }
+.diagram .box { fill: var(--surface); stroke-width: 1.5; }
+.diagram .lane-app { fill: var(--accent-soft); stroke: var(--accent); }
+.diagram .lane-store { fill: var(--soil-soft); stroke: var(--soil); }
+.diagram .lane-sdk { fill: var(--ochre-soft); stroke: var(--ochre); }
+.diagram .b-app { stroke: var(--accent); } .diagram .b-store { stroke: var(--soil); } .diagram .b-sdk { stroke: var(--ochre); }
+.diagram .arrow { stroke: var(--ink); stroke-width: 1.6; fill: none; marker-end: url(#ah); }
+.diagram .dash { stroke-dasharray: 5 4; }
+/* 평가서 목차 표 보조 */
+.status td:nth-child(3) { white-space: nowrap; }
+.note { border-left: 3px solid var(--ochre); background: var(--ochre-soft); padding: 10px 14px; border-radius: 0 4px 4px 0; margin: 14px 0; max-width: 72ch; }
+.note.gap { border-left-color: var(--gap); background: var(--gap-soft); }
+.note.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.cols > div { min-width: 0; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { position: static; padding-top: 20px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  nav.toc b { width: 100%; margin-bottom: 0; }
+  nav.toc a { border-left: 0; padding: 2px 0; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="목차">
+  <b>목차</b>
+  <a href="#goal">1 목표와 결과물</a>
+  <a href="#now">2 지금 상태</a>
+  <a href="#principles">3 핵심 원칙</a>
+  <a href="#flow">4 사용자 흐름</a>
+  <a href="#system">5 시스템 구조</a>
+  <a href="#contract">6 계약 세 가지</a>
+  <a href="#report">7 평가서 구성</a>
+  <a href="#gate">8 출고 검사</a>
+  <a href="#nano">9 나노바나나 프로</a>
+  <a href="#cleanup">10 앱 정리</a>
+  <a href="#roadmap">11 단계와 합격 기준</a>
+  <a href="#decided">12 정한 것·남은 것</a>
+</nav>
+
+<main>
+<header class="top">
+  <div class="stamp">STRATA · 설계도 · 2026-10-23 · 코드는 아직 바꾸지 않음</div>
+  <h1>시굴 전 종합 평가 설계도</h1>
+  <p class="lead">조사구역을 그리고 반경을 정하면, 주변유적마다 GIS 실측값과 발굴조사보고서, 논문을 한 묶음으로 모아 <b>확실한 근거로만</b> 쓴 평가서를 냅니다. 이 페이지는 처음부터 끝까지의 설계를 한곳에 둔 것이고, 단계가 끝날 때마다 현황 표지를 고쳐 다시 올립니다.</p>
+</header>
+
+<section id="goal">
+  <h2>1 목표와 결과물</h2>
+  <p class="sub">사용자가 시굴에 들어가기 전에 읽는 문서 한 권</p>
+  <div class="cols">
+    <div>
+      <h3>평가서가 답해야 하는 세 가지</h3>
+      <ol>
+        <li>이 지역에서 시굴하기 전에 <b>내가 알아야 할 것</b>은 무엇인가</li>
+        <li>시굴을 어떤 정보로 해야 하고, <b>어떤 정보가 더 있어야</b> 하는가</li>
+        <li>어떤 유적과 <b>연계성</b>을 알아야 하는가</li>
+      </ol>
+    </div>
+    <div>
+      <h3>나오는 파일</h3>
+      <ul>
+        <li>평가서 <code>.hwpx</code> 와 <code>.pdf</code></li>
+        <li>부록: 모든 문장의 <b>근거 대장</b>, 모식도 사용 내역</li>
+        <li>근거는 보고서 쪽 번호, 논문 서지까지 눌러서 확인 가능</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="now">
+  <h2>2 지금 상태 <small>직접 확인한 것</small></h2>
+  <p class="sub">문제는 만들어 둔 조각이 아니라, 조각 사이에 합의된 약속이 없다는 점입니다.</p>
+  <div class="scroll"><table>
+    <tr><th>항목</th><th>확인한 사실</th><th>영향</th></tr>
+    <tr><td>Antigravity SDK</td><td>코드에 없고 규칙 문서와 안내 문구에만 있다</td><td>중계 AI가 아직 없다</td></tr>
+    <tr><td>근거를 모으는 길</td><td>셋, 서로 이어지지 않음: 앱의 전국 보고서 DB · 앱 안 DBpia 직접 호출 · 독립 경주 DB</td><td>같은 질문에 답이 달라진다</td></tr>
+    <tr><td>앱 안 DBpia 호출</td><td>수집 스크립트가 중단했다고 적은 공개 검색 API를 그대로 쓴다</td><td>정책이 어긋난다</td></tr>
+    <tr><td>산출물 모양</td><td>지금 문서는 조사가 끝난 뒤의 발굴(시굴)조사 보고서 틀(Ⅰ~Ⅵ장)</td><td>사용자가 원하는 시굴 전 평가서가 아니다</td></tr>
+    <tr><td>문서 속 내부 표지</td><td><code>RAG_CITATION_SLOT</code>, 「RAG 연결 슬롯 대기 중」, 「OpenHwpSDK 초기화 실패」가 문서에 들어갈 수 있다</td><td>제출물에 쓰레기가 남는다</td></tr>
+    <tr><td>내부 용어 노출</td><td>보고서 관련 글자에 「RAG」 22곳, 「GIS 서지」 10곳, 「누름틀」 6곳, 「피처ID」 3곳</td><td>현장 사용자가 모르는 말</td></tr>
+    <tr><td>기호</td><td>✓ △ ◌ ○ 가 설명 없이 표에 들어가고 ┏ ┓ 같은 장식도 있다</td><td>뜻 모를 글자</td></tr>
+  </table></div>
+  <div class="note ok"><b>이미 잘 된 것, 버리지 않습니다.</b> <code>GisFactHarness::Ledger</code>(앱이 계산한 값만 담고 없는 자료는 잠금), 근거 4단계 라벨, 「임의로 채우지 않았습니다」 원칙. 이것이 계약의 뼈대가 됩니다.</div>
+</section>
+
+<section id="principles">
+  <h2>3 핵심 원칙</h2>
+  <div class="rules">
+    <div class="rule"><b>1. 연결은 코드가, 판단은 AI가</b><span>어느 보고서가 어느 유적 것인지는 유산코드·허가번호·유적명·소재지로 코드가 확정한다. AI는 모인 근거를 읽고 종합·집필한다.</span></div>
+    <div class="rule"><b>2. 유적마다 근거 꾸러미 하나</b><span>모든 것을 서로 잇지 않는다. 꾸러미를 중심에 두고 AI는 꾸러미만 읽고 쓴다.</span></div>
+    <div class="rule"><b>3. AI가 없어도 근거표는 나온다</b><span>AI·인터넷·DBpia 로그인이 없어도 GIS 표와 보고서 근거표는 만들어진다.</span></div>
+    <div class="rule"><b>4. 모든 문장에 근거 번호</b><span>근거 번호가 없는 주장은 평가서에 들어가지 못한다.</span></div>
+    <div class="rule"><b>5. 정확한 그림은 GIS, 설명 그림은 AI</b><span>위치·거리·축척이 있는 그림은 GIS가 그린다. 나노바나나 프로는 개념 모식도만 그리고 「모식도(실측 아님)」를 박는다.</span></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>4 사용자 흐름 <small>현장</small></h2>
+  <p class="sub">앞 세 단계는 지금 앱 그대로입니다. <span class="tag t-app">앱</span> <span class="tag t-sdk">SDK</span></p>
+  <ol class="flow">
+    <li>조사구역을 그린다</li>
+    <li>반경을 고른다 (500m / 1000m)</li>
+    <li>주변유적이 자동으로 뽑힌다</li>
+    <li class="sdk">「평가서 만들기」 — 단계 이름으로 진행이 보인다</li>
+    <li>유적별 근거 확인: 어떤 보고서 몇 쪽, 어떤 논문, 무엇이 비었나</li>
+    <li class="sdk">미리보기를 읽고 고칠 곳은 글로 요청</li>
+    <li>출고 검사 통과 후 HWPX · PDF로 내보내기</li>
+  </ol>
+</section>
+
+<section id="system">
+  <h2>5 시스템 구조</h2>
+  <p class="sub">세 곳이 파일(JSON)로 주고받습니다. 처음에는 파일, 안정되면 MCP를 얹습니다.</p>
+  <div class="diagram">
+  <svg viewBox="0 0 960 430" role="img" aria-label="앱, 근거 저장소, Antigravity SDK 세 곳의 데이터 흐름">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ink)"/></marker></defs>
+    <rect class="box lane-app" x="10" y="10" width="290" height="410" rx="6"/>
+    <rect class="box lane-store" x="335" y="10" width="290" height="410" rx="6"/>
+    <rect class="box lane-sdk" x="660" y="10" width="290" height="410" rx="6"/>
+    <text class="h" x="26" y="38">앱 · GIS와 화면</text><text class="lbl" x="26" y="55">지금 앱을 그대로 쓴다</text>
+    <text class="h" x="351" y="38">근거 저장소 · 읽기 전용</text><text class="lbl" x="351" y="55">처음 범위: 경주</text>
+    <text class="h" x="676" y="38">Antigravity SDK</text><text class="lbl" x="676" y="55">수집 · 종합 · 집필 · 편집</text>
+
+    <rect class="box b-app" x="26" y="72" width="258" height="56" rx="4"/><text x="38" y="96">조사구역 · 반경 · 주변유적</text><text class="lbl" x="38" y="114">이격거리 · 방위 · 해발 · 유산코드</text>
+    <rect class="box b-app" x="26" y="150" width="258" height="56" rx="4"/><text x="38" y="174">사실 묶음 내보내기 (JSON)</text><text class="lbl" x="38" y="192">앱이 계산한 값만 · 없는 자료는 잠금</text>
+    <rect class="box b-app" x="26" y="300" width="258" height="56" rx="4"/><text x="38" y="324">평가서 미리보기 · 수정 요청</text><text class="lbl" x="38" y="342">근거 번호를 눌러 출처로 이동</text>
+    <rect class="box b-app" x="26" y="362" width="258" height="46" rx="4"/><text x="38" y="382">출고 검사 → HWPX · PDF</text><text class="lbl" x="38" y="398">걸리면 내보내기 전에 목록으로 알림</text>
+
+    <rect class="box b-store" x="351" y="72" width="258" height="56" rx="4"/><text x="363" y="96">발굴조사보고서 전문</text><text class="lbl" x="363" y="114">쪽 번호 · 보고서명 · 연도 · 기관</text>
+    <rect class="box b-store" x="351" y="140" width="258" height="56" rx="4"/><text x="363" y="164">논문 서지 · 초록</text><text class="lbl" x="363" y="182">DBpia</text>
+    <rect class="box b-store" x="351" y="208" width="258" height="56" rx="4"/><text x="363" y="232">DBpia AI 답변</text><text class="lbl" x="363" y="250">미리 수집해 쌓아 둔 것</text>
+    <rect class="box b-store" x="351" y="300" width="258" height="56" rx="4"/><text x="363" y="324">근거 항목 (E1, E2 …)</text><text class="lbl" x="363" y="342">출처 · 쪽 · 원문 · 상태 4단계</text>
+
+    <rect class="box b-sdk" x="676" y="72" width="258" height="56" rx="4"/><text x="688" y="96">① 꾸러미 조립</text><text class="lbl" x="688" y="114">유적마다 GIS + 보고서 + 논문</text>
+    <rect class="box b-sdk" x="676" y="150" width="258" height="56" rx="4"/><text x="688" y="174">② 종합 · 연계성 · 집필</text><text class="lbl" x="688" y="192">모든 문장에 근거 번호</text>
+    <rect class="box b-sdk" x="676" y="228" width="258" height="56" rx="4"/><text x="688" y="252">③ 편집</text><text class="lbl" x="688" y="270">용어 통일 · 표 번호 · 중복 제거</text>
+    <rect class="box b-sdk" x="676" y="306" width="258" height="56" rx="4"/><text x="688" y="330">④ 나노바나나 프로 모식도</text><text class="lbl" x="688" y="348">설명용만 · 사람이 채택해야 삽입</text>
+    <rect class="box b-sdk" x="676" y="374" width="258" height="34" rx="4"/><text x="688" y="396">⑤ 수집기 → 저장소 채우기</text>
+
+    <path class="arrow" d="M155 128 V150"/>
+    <path class="arrow" d="M155 206 V282 H636 V100 H676"/>
+    <text class="lbl" x="165" y="250">사실 묶음</text>
+    <path class="arrow" d="M609 328 H650 V178 H676"/>
+    <text class="lbl" x="612" y="344">근거</text>
+    <path class="arrow" d="M676 270 H318 V328 H284"/>
+    <text class="lbl" x="440" y="296">평가 결과 (JSON)</text>
+    <path class="arrow dash" d="M676 391 H614"/>
+    <text class="lbl" x="620" y="384">채움</text>
+  </svg>
+  </div>
+  <div class="note">앱 안 DBpia 직접 호출(<code>KaGeminiBridgeClient</code>)은 화면에서 숨기고 코드는 둡니다. 수집은 DBpia AI를 통해서만 하며, 현장에서는 DBpia 로그인 없이 저장소만 읽습니다.</div>
+</section>
+
+<section id="contract">
+  <h2>6 계약 세 가지 <small>JSON</small></h2>
+  <p class="sub">이 세 모양만 지키면 앱, 저장소, SDK를 따로 만들어도 맞물립니다.</p>
+  <h3><span class="tag t-app">앱</span> → <span class="tag t-sdk">SDK</span> 사실 묶음</h3>
+  <p>지금의 <code>GisFactHarness::Ledger</code>를 그대로 JSON으로 냅니다.</p>
+<pre>{
+  "survey":  { "title": "경주 성동동 시굴", "crs": "EPSG:5187", "areaM2": 1840, "radiusM": 500, "region": "경주시" },
+  "cards":   [ { "id": "G1", "kind": "nearby_heritage", "subject": "경주 황남동 유적",
+                 "attribute": "이격거리", "value": "142", "unit": "m", "direction": "북서" } ],
+  "sites":   [ { "name": "경주 황남동 유적", "heritageCode": "…", "permitNo": "…",
+                 "institution": "…", "bibliography": { "title": "…", "year": 2019 } } ],
+  "uncollected": [ "soil", "paleo_landform", "dem", "geology" ]   // 이 목록은 수치를 쓸 수 없다
+}</pre>
+  <h3><span class="tag t-store">저장소</span> → <span class="tag t-sdk">SDK</span> 근거 항목</h3>
+<pre>{ "id": "E12", "siteRef": "경주 황남동 유적", "kind": "report",
+  "source": { "title": "…발굴조사보고서", "year": 2019, "institution": "…" },
+  "page": 78, "text": "원문 그대로",
+  "status": "same_report" }   // same_report | reference | scan | missing</pre>
+  <p>상태 네 가지: <span class="tag t-ok">동일 보고서 확인</span> <span class="tag t-sdk">참고</span> <span class="tag t-todo">스캔본(직접 대조)</span> <span class="tag t-gap">미수록</span>. 기호(✓ △ ◌ ○)는 화면 범례용이고 제출 문서에는 말로 씁니다.</p>
+  <h3><span class="tag t-sdk">SDK</span> → <span class="tag t-app">앱</span> 평가 결과</h3>
+<pre>{ "sections": [ { "key": "link", "title": "연계성",
+      "claims": [ { "text": "…", "evidenceIds": ["E12", "E31"], "type": "fact" } ] } ],
+  "figures":  [ { "file": "strata_1.png", "label": "모식도(실측 아님)", "evidenceIds": ["E12"] } ],
+  "gaps":     [ "토양 자료 없음 — 현장에서 확인" ] }   // type: fact(사실) | inference(추정) | none(자료 없음)</pre>
+</section>
+
+<section id="report">
+  <h2>7 평가서 구성</h2>
+  <p class="sub">지금의 조사 후 보고서 틀(Ⅰ~Ⅵ장)은 버리지 않고 「보고서 초안」 모드로 분리해 같은 근거를 재사용합니다(2차).</p>
+  <div class="scroll"><table>
+    <tr><th>장</th><th>내용</th><th>주된 근거</th></tr>
+    <tr><td>0 요약</td><td>시굴 전에 꼭 알아야 할 것 5가지, 한 쪽</td><td>아래 장 전체</td></tr>
+    <tr><td>1 조사구역 개요</td><td>면적, 좌표계, 지형·해발, 토양·지질(있을 때)</td><td>GIS</td></tr>
+    <tr><td>2 반경별 주변유적</td><td>500m, 1000m 표와 분포 약도</td><td>GIS</td></tr>
+    <tr><td>3 유적별 카드</td><td>시대, 유구, 층위, 출토 + 근거 쪽 번호</td><td>보고서</td></tr>
+    <tr><td>4 연계성</td><td>조사구역과 어떤 유적이 왜 이어지는가. 사실과 추정을 나눠 표시</td><td>보고서 + 논문</td></tr>
+    <tr><td>5 시굴 참고</td><td>확인된 층위·유구 깊이, 예상 시대·유구, 주의할 구역. 판단은 「참고」 표시</td><td>보고서 + 논문</td></tr>
+    <tr><td>6 부족한 자료</td><td>현장에서 확인할 것 체크리스트</td><td><code>uncollected</code>, 미수록</td></tr>
+    <tr><td>7 참고문헌</td><td>보고서, 논문</td><td>근거 항목</td></tr>
+    <tr><td>부록</td><td>A 근거 대장(문장 번호 → 출처·쪽), B 모식도 사용 내역</td><td>근거 항목</td></tr>
+  </table></div>
+</section>
+
+<section id="gate">
+  <h2>8 출고 검사 <small>제출물 품질을 지키는 문</small></h2>
+  <p class="sub">내보내기 직전에 앱이 검사하고, 걸리면 내보내기를 막고 목록으로 알립니다.</p>
+  <div class="cols">
+    <div><h3>막는 것</h3>
+      <ul>
+        <li>금지어: RAG, SDK, 피처ID, 슬롯, 누름틀, Antigravity, <code>*_SLOT</code></li>
+        <li>깨진 글자, 장식 기호</li>
+        <li>근거 번호 없는 사실 문장</li>
+        <li><code>uncollected</code>에 있는 도메인의 수치</li>
+        <li>「자료 없음」 문장도 없이 비어 있는 장</li>
+        <li>「모식도(실측 아님)」 표시 없는 AI 그림</li>
+      </ul></div>
+    <div><h3>이렇게 막는다</h3>
+      <p>문서를 만든 뒤 글자를 훑어 검사합니다. 소스의 화면 글자는 <code>ui_terms</code> 시험이 같은 금지어를 지킵니다. 그래서 새 기능이 옛 습관으로 다시 쓰레기를 넣어도 시험에서 걸립니다.</p></div>
+  </div>
+</section>
+
+<section id="nano">
+  <h2>9 나노바나나 프로 <small>설명 그림 전용</small></h2>
+  <div class="cols">
+    <div><h3>쓰는 곳</h3><ul><li>층위 대비 모식도</li><li>유구 개념도</li></ul>
+      <p>위치·거리·축척이 있는 그림에는 쓰지 않습니다. 그건 GIS가 그립니다.</p></div>
+    <div><h3>규칙</h3>
+      <ul>
+        <li>입력: 근거 항목과 사실 묶음에서 만든 구조화 지시(시대, 층위 순서, 깊이). 자유 서술 금지</li>
+        <li>출력: 그림 + 지시문 + 근거 번호를 부록 B에 남김</li>
+        <li>사람이 채택한 그림만 문서에 들어감</li>
+        <li>모든 그림에 「모식도(실측 아님)」</li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="cleanup">
+  <h2>10 앱 정리 <small>쓰레기 · 이상한 문자</small></h2>
+  <div class="scroll"><table>
+    <tr><th>지금</th><th>바꾸는 것</th></tr>
+    <tr><td>RAG, GIS 서지, 누름틀, 피처ID</td><td>글자 사전 한 표로 통일: 「보고서 근거」, 「공식 서지」, 「양식 칸」 …. 사용자에게 보이는 곳은 이 말만 쓴다</td></tr>
+    <tr><td><code>RAG_CITATION_SLOT</code> 등 자리표시자</td><td>문서에 들어가지 않게 한다. 근거가 없으면 「자료 없음」과 이유</td></tr>
+    <tr><td>✓ △ ◌ ○, ┏ ┓ ※</td><td>기호는 화면에서만 쓰고 범례를 둔다. 제출 문서는 말로. 장식은 뺀다</td></tr>
+    <tr><td>「동국문화재연구원」 고정 문구</td><td>설정값으로 옮긴다</td></tr>
+    <tr><td>정리 방식</td><td><code>ui_terms</code>를 넓혀 금지어가 다시 들어오면 시험이 실패하게 잠근다</td></tr>
+  </table></div>
+</section>
+
+<section id="roadmap">
+  <h2>11 단계와 합격 기준</h2>
+  <p class="sub">현황 표지는 단계가 끝날 때마다 고쳐서 다시 올립니다. 마지막 갱신: 2026-10-23, 설계 단계.</p>
+  <div class="scroll status"><table>
+    <tr><th>단계</th><th>하는 일</th><th>현황</th><th>끝났다는 기준 (확인 방법)</th></tr>
+    <tr><td>M0 정리</td><td>글자 사전, 자리표시자·기호·장식 제거, 금지어 시험</td><td><span class="tag t-todo">미착수</span></td><td>금지어 0건(시험), 생성 문서의 자리표시자 0건</td></tr>
+    <tr><td>M1 계약</td><td>JSON 세 가지 + 샘플 + 앱의 사실 묶음 내보내기</td><td><span class="tag t-todo">미착수</span></td><td>스키마 검증 시험 통과, 샘플 파일 저장</td></tr>
+    <tr><td>M2 저장소</td><td>근거 저장소 하나로 읽기, 앱 안 DBpia 단추 숨김</td><td><span class="tag t-todo">미착수</span></td><td>경주 유적 3곳에서 같은 질문에 같은 근거, 직접 단추 없음</td></tr>
+    <tr><td>M3 SDK 최소</td><td>꾸러미 조립 + 규칙 기반 뼈대 평가(AI 없이)</td><td><span class="tag t-todo">미착수</span></td><td>AI를 끈 상태에서 0·1·2·3·6·7장이 나온다</td></tr>
+    <tr><td>M4 종합·집필</td><td>Antigravity가 4·5장과 요약, 근거 번호 부착</td><td><span class="tag t-todo">미착수</span></td><td>근거 번호 없는 사실 문장 0건(출고 검사)</td></tr>
+    <tr><td>M5 모식도</td><td>나노바나나 프로, 채택 절차, 부록 B</td><td><span class="tag t-todo">미착수</span></td><td>모든 그림에 표시와 근거 번호</td></tr>
+    <tr><td>M6 현장 시험</td><td>경주 시굴지(성동동·황오동)로 평가서를 만들고 사용자가 읽는다</td><td><span class="tag t-todo">미착수</span></td><td>사용자가 「쓸 만하다」고 답함 + 아래 합격 기준</td></tr>
+    <tr><td>M7 Windows 마무리</td><td>HWPX · PDF 열기, CI 초록, 포터블</td><td><span class="tag t-todo">미착수</span></td><td>Windows에서 열림, CI 초록</td></tr>
+  </table></div>
+  <div class="note ok"><b>M6 합격 기준 다섯 가지</b>
+    <ol>
+      <li>모든 주장의 출처와 쪽을 눌러서 확인할 수 있다</li>
+      <li>빈 곳은 「자료 없음」과 이유가 있다</li>
+      <li>금지어·자리표시자가 0건이다</li>
+      <li>부족한 자료 목록이 현장에서 쓸 만하다</li>
+      <li>사용자가 시굴 전에 읽고 싶은 순서로 되어 있다</li>
+    </ol></div>
+  <div class="note gap"><b>정직한 판정:</b> 지금 상태로는 결과물이 만족스럽지 않습니다(2절). 이 설계대로 M0~M6을 마치면 가능하지만, 조건이 둘 있습니다. ① 첫 버전은 자료가 있는 경주까지만 ② 시굴 참고(5장)는 사람이 확인하는 참고 의견이지 결론이 아님.</div>
+</section>
+
+<section id="decided">
+  <h2>12 정한 것 · 남은 것</h2>
+  <div class="cols">
+    <div><h3>사용자가 정함 (추천대로)</h3>
+      <ul>
+        <li>Antigravity SDK가 AI 처리를 맡는다</li>
+        <li>앱 안 DBpia 직접 단추는 SDK가 오기 전까지 숨김 (코드는 둠)</li>
+        <li>첫 버전은 경주만</li>
+        <li>평가서 항목은 7절 표대로</li>
+      </ul>
+      <h3>내가 정함 (기술)</h3>
+      <ul>
+        <li>처음 주고받는 방식은 파일(JSON), MCP는 나중</li>
+        <li>수집은 미리 해서 쌓고, 현장에서는 저장소만 읽음</li>
+        <li>조사 후 보고서 틀은 「보고서 초안」 모드로 보존</li>
+      </ul></div>
+    <div><h3>남은 것 (그 시점에 묻는다)</h3>
+      <ul>
+        <li>기관 이름·표지 양식 (M0)</li>
+        <li>5장에서 어디까지 권고로 써도 되는지 (M4 전)</li>
+      </ul>
+      <h3>하지 않는 것</h3>
+      <ul>
+        <li>다른 터미널의 수집(<code>scripts/gyeongju_rag/</code>)을 건드리지 않음</li>
+        <li>유료 원문 PDF 내려받기, 결제 행위</li>
+        <li>AI가 유적과 보고서를 잇는 일</li>
+        <li>근거 없는 수치·시대·깊이</li>
+        <li>GIS 기능 변경</li>
+      </ul></div>
+  </div>
+</section>
+
+<footer>글로 된 정본: <code>docs/superpowers/specs/2026-10-23-시굴전-종합평가-설계.md</code> · 요청 기록: <code>docs/intent/2026-10-23-survey-prior-assessment.md</code></footer>
+</main>
+</div>
