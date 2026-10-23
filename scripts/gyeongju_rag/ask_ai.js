@@ -230,20 +230,41 @@ async function askOne(page, question) {
   }
 
   const before = await snapshot();
-  const ta = await page.$('textarea');
-  if (!ta) throw new Error('질문 입력창을 찾지 못했습니다.');
-  await ta.click();
-  await page.evaluate(() => { const t = document.querySelector('textarea'); t.value = ''; });
-  // 타이핑이 잘렸는지 확인하고, 잘렸으면 다시 입력한다.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await page.evaluate(() => { const t = document.querySelector('textarea'); t.value = ''; });
-    await ta.type(question, { delay: 8 });
-    await sleep(400);
-    const echo = await page.evaluate(() => document.querySelector('textarea').value || '');
-    if (echo.replace(/\s+/g, ' ').trim().length >= question.replace(/\s+/g, ' ').trim().length * 0.95) break;
-    if (attempt === 2) throw new Error('INPUT_TRUNCATED');
-    await sleep(1000);
+  // 붙여넣기 방식이 타이핑보다 잘리지 않는다. React 입력창이라 네이티브 setter+input 이벤트 사용.
+  const wantLen = question.replace(/\s+/g, ' ').trim().length * 0.95;
+  const echoLen = () => page.evaluate(() =>
+    ((document.querySelector('textarea') || {}).value || '').replace(/\s+/g, ' ').trim().length);
+  let filled = false;
+  for (let attempt = 0; attempt < 2 && !filled; attempt++) {
+    filled = await page.evaluate((text) => {
+      const t = document.querySelector('textarea');
+      if (!t) return false;
+      t.focus();
+      const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(t), 'value');
+      if (desc && desc.set) desc.set.call(t, text);
+      else t.value = text;
+      t.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    }, question);
+    if (!filled) break;
+    await sleep(600);
+    filled = (await echoLen()) >= wantLen;
+    if (!filled) await sleep(1000);
   }
+  if (!filled) {
+    // 최후 수단: 타이핑
+    const ta = await page.$('textarea');
+    if (!ta) throw new Error('질문 입력창을 찾지 못했습니다.');
+    await ta.click();
+    for (let attempt = 0; attempt < 2 && !filled; attempt++) {
+      await page.evaluate(() => { const t = document.querySelector('textarea'); t.value = ''; });
+      await ta.type(question, { delay: 8 });
+      await sleep(400);
+      filled = (await echoLen()) >= wantLen;
+      if (!filled) await sleep(1000);
+    }
+  }
+  if (!filled) throw new Error('INPUT_TRUNCATED');
   await page.keyboard.press('Enter');
 
   // 새 대화가 열리기를 기다린다.
