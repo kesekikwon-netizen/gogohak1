@@ -1,0 +1,17 @@
+{
+  "_comment": "예시입니다. 실제 조사 자료가 아닙니다. 앱이 SDK에 주는 사실 묶음의 모양을 보여 줍니다.",
+  "schemaVersion": "1.0",
+  "survey": { "title": "예시 시굴조사", "crs": "EPSG:5187", "areaM2": 1840, "radiusM": 500, "region": "경주시" },
+  "cards": [
+    { "id": "G1", "kind": "survey_area", "subject": "조사구역", "attribute": "면적", "value": "1840", "unit": "㎡", "confidence": "verified" },
+    { "id": "G2", "kind": "nearby_heritage", "subject": "예시 유적 A", "siteName": "예시 유적 A", "attribute": "이격거리",
+      "value": "142", "unit": "m", "direction": "북서", "distanceMeters": 142, "confidence": "verified" }
+  ],
+  "sites": [
+    { "name": "예시 유적 A", "dataset": "예시 데이터셋", "distanceM": 142, "direction": "북서", "heritageCode": "EX-0001",
+      "featureKey": "", "permitNo": "2019-12", "institution": "예시연구원", "projectName": "예시 사업", "address": "예시 소재지",
+      "era": "삼국시대", "presence": "유", "bibliography": { "title": "예시연구원, 2019, 예시 유적 발굴조사보고서", "year": 2019 } }
+  ],
+  "uncollected": ["soil", "paleo_landform", "dem", "geology"],
+  "searchQueries": ["예시 유적 A 발굴"]
+}

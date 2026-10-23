@@ -49,6 +49,10 @@ ctest --test-dir build -C Release -R '<아래 이름>' --output-on-failure
 | J 비밀·문서 | `e2e_opaque_suite` | VWorld 키를 URL에만 주입, 하드코딩 없음 |
 | J | `theme_qss` 슬롯 `noUrl` | QSS `url(` 없음 |
 | J | [docs/README.md](README.md) | 현행 문서 한 장 (`docs/archive/` 분리) |
+| K 보고서·평가서 | `assessment_contract` | 사실 묶음 내보내기, 근거 항목·평가 결과 검사(근거 번호, 잠긴 도메인 수치, 개발 용어, 모식도 표시), 저장소의 샘플 JSON |
+| K | `report_region` | 보고서 지역 분류: 경로의 도 폴더 우선, 고성·광주·영동은 폴더가 없으면 「미분류」 |
+| K | `ui_terms` | 「조판」 금지, 보고서 글자에 개발 용어(RAG·SDK·누름틀 …)와 장식 문자 금지 |
+| K | `hwp_survey_report` | 보고서 문서 만들기·열기·고치기, 공식 서지 표(실제 보고서 DB가 없으면 일부 건너뜀) |
 
 ## save_open 분할 (7-3)
 
