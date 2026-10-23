@@ -1,6 +1,8 @@
 #pragma once
 
-#if !defined(_WINDEF_) && !defined(HWND_DEFINED)
+#ifdef _WIN32
+#include <windows.h>
+#elif !defined(HWND_DEFINED)
 #define HWND_DEFINED
 typedef void* HWND;
 #endif
