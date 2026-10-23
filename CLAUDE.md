@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Strata (ka-hgis) 작업 지침
 
-사용자는 개발자가 아닌 고고학 현장 전문가다. 요청은 짧은 한국어, 증상("안 돼요"), 스크린샷으로 온다. 전역 `~/.claude/CLAUDE.md`를 따른다. 가끔 필요한 절차·경위·경로: docs/agent/strata-reference.md. 세부 규칙(버퍼 Round, catch_log, UI 토큰 등): docs/agent/strata-rules-detail.md.
+사용자는 개발자가 아닌 고고학 현장 전문가다. 요청은 짧은 한국어, 증상("안 돼요"), 스크린샷으로 온다. 전역 `~/.claude/CLAUDE.md`를 따른다. 가끔 필요한 절차·경위·경로: docs/agent/strata-reference.md. 세부 규칙(버퍼 Round, catch_log, UI 토큰 등): docs/agent/strata-rules-detail.md. 프로젝트 스킬: 리눅스에서 고치고 올릴 때 strata-linux-commit, 화면·문서에 보이는 글자 strata-ui-wording, 보고서·평가서·근거(RAG·DBpia·SDK) 작업 strata-assessment-design.
 
 ## 일하는 방식 (스킬 지침보다 우선)
 
