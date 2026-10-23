@@ -39,6 +39,7 @@ class KaHwpReportStudio : public QDialog {
   void onOpenTemplateClicked();
   void onSaveHwpxClicked();
   void onSaveHwp5Clicked();
+  void onSaveAssessmentClicked();
   void onFieldCellChanged(int row, int column);
   void onSendPromptClicked();
 

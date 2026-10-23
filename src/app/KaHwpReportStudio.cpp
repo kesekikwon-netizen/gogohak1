@@ -120,6 +120,7 @@ KaHwpReportStudio::KaHwpReportStudio(QWidget* parent)
   auto* saveMenu = new QMenu(btnSaveMenu);
   saveMenu->addAction(QStringLiteral("한글 표준(.hwpx) 저장…"), this, &KaHwpReportStudio::onSaveHwpxClicked);
   saveMenu->addAction(QStringLiteral("한글 5.0(.hwp) 저장…"), this, &KaHwpReportStudio::onSaveHwp5Clicked);
+  saveMenu->addAction(QStringLiteral("평가 자료 저장…"), this, &KaHwpReportStudio::onSaveAssessmentClicked);
   saveMenu->addSeparator();
   saveMenu->addAction(QStringLiteral("기관 한글 양식(.hwpx/.hwp) 열기…"), this, &KaHwpReportStudio::onOpenTemplateClicked);
   saveMenu->addAction(QStringLiteral("별도 창으로 보기…"), this, &KaHwpReportStudio::openLivePaperWindow);

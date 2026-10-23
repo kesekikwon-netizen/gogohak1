@@ -1,6 +1,9 @@
 #include "AssessmentSkeleton.h"
 
+#include <QDir>
+#include <QJsonDocument>
 #include <QMap>
+#include <QSaveFile>
 
 namespace AssessmentSkeleton {
 
@@ -149,6 +152,26 @@ Result build(const GisFactHarness::Ledger& ledger, const HwpSurveyReportService:
                              {"figures", QJsonArray()},
                              {"gaps", QJsonArray::fromStringList(gaps)}};
   return r;
+}
+
+bool writeBundle(const QString& folder, const Result& result, QString* error) {
+  auto fail = [&](const QString& why) {
+    if (error) *error = why;
+    return false;
+  };
+  if (folder.trimmed().isEmpty()) return fail(QStringLiteral("저장할 폴더가 정해지지 않았습니다"));
+  if (!QDir().mkpath(folder)) return fail(QStringLiteral("폴더를 만들지 못했습니다: %1").arg(folder));
+  const QDir dir(folder);
+  const std::pair<QString, QByteArray> files[] = {
+      {QStringLiteral("facts.json"), QJsonDocument(result.facts).toJson(QJsonDocument::Indented)},
+      {QStringLiteral("evidence.json"), QJsonDocument(result.evidence).toJson(QJsonDocument::Indented)},
+      {QStringLiteral("assessment.json"), QJsonDocument(result.assessment).toJson(QJsonDocument::Indented)}};
+  for (const auto& [name, bytes] : files) {
+    QSaveFile file(dir.filePath(name));  // 끝까지 쓴 뒤에만 바꿔치기해서 실패해도 기존 파일이 남는다.
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit())
+      return fail(QStringLiteral("파일을 쓰지 못했습니다: %1").arg(file.fileName()));
+  }
+  return true;
 }
 
 }  // namespace AssessmentSkeleton

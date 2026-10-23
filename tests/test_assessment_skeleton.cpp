@@ -1,8 +1,11 @@
 // AI 없이 만드는 시굴 전 평가 뼈대. 계약 검사기를 통과해야 하고, 근거가 없는 곳은 「자료 없음」으로 말해야 한다.
 #include "core/AssessmentSkeleton.h"
 
+#include <QDir>
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QTemporaryDir>
 #include <QtTest>
 
 using namespace AssessmentSkeleton;
@@ -155,6 +158,33 @@ class TestAssessmentSkeleton : public QObject {
                                                                         AssessmentContract::gisIdsOf(r.facts));
     QVERIFY2(problems.isEmpty(), qUtf8Printable(problems.join(QLatin1Char('\n'))));
     QVERIFY(anyContains(claimTexts(r.assessment, QStringLiteral("summary")), QStringLiteral("주변유적을 찾지 못했다")));
+  }
+
+  void writesThreeFilesThatReadBackEqual() {
+    Fixture f;
+    const Result r = build(f.ledger, f.snap);
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString target = dir.filePath(QStringLiteral("평가 자료/성동동"));  // 없는 폴더도 만든다
+    QString error;
+    QVERIFY2(writeBundle(target, r, &error), qUtf8Printable(error));
+    auto load = [&](const QString& name) {
+      QFile file(QDir(target).filePath(name));
+      return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()) : QJsonDocument();
+    };
+    QCOMPARE(load(QStringLiteral("facts.json")).object(), r.facts);
+    QCOMPARE(load(QStringLiteral("evidence.json")).array(), r.evidence);
+    QCOMPARE(load(QStringLiteral("assessment.json")).object(), r.assessment);
+    // 다시 써도 같은 파일이다(덮어쓰기).
+    QVERIFY2(writeBundle(target, r, &error), qUtf8Printable(error));
+    QCOMPARE(QDir(target).entryList(QDir::Files).size(), 3);
+  }
+
+  void refusesAnEmptyFolderName() {
+    Fixture f;
+    QString error;
+    QVERIFY(!writeBundle(QString(), build(f.ledger, f.snap), &error));
+    QVERIFY(!error.isEmpty());
   }
 
   void sameInputGivesSameOutput() {
