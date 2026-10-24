@@ -292,6 +292,7 @@ add_library(ka_core STATIC
   src/core/RiverMapService.cpp
   src/core/Terrain3dService.cpp
   src/core/Terrain3dLayoutService.cpp
+  src/core/Strata3dLink.cpp
   src/core/TilePrint.cpp
   src/core/PdfExportSettings.cpp
   src/core/StandardScales.cpp
@@ -397,6 +398,7 @@ add_library(ka_core STATIC
   src/core/RiverMapService.h
   src/core/Terrain3dService.h
   src/core/Terrain3dLayoutService.h
+  src/core/Strata3dLink.h
   src/core/TilePrint.h
   src/core/CadDwgConverter.h
   src/core/CadDrawingReader.h
@@ -563,6 +565,7 @@ add_executable(ka-hgis
   src/app/KaDrawingSheetSet.cpp
   src/app/KaDrawingPdfProgress.cpp
   src/app/KaTitleBlock.cpp
+  src/app/KaStrata3dLink.cpp
   src/app/KaTerrain3dStudio.cpp
   src/app/KaTerrain3dLayoutStudio.cpp
   src/app/KaTerrain3dView.cpp
@@ -689,6 +692,7 @@ add_executable(ka-hgis
   src/app/KaDrawingSheetSet.h
   src/app/KaDrawingPdfProgress.h
   src/app/KaTitleBlock.h
+  src/app/KaStrata3dLink.h
   src/app/KaTerrain3dStudio.h
   src/app/KaTerrain3dLayoutStudio.h
   src/app/KaTerrain3dView.h
@@ -1258,10 +1262,20 @@ if(KA_HGIS_BUILD_TESTS)
   endif()
   ka_add_qtest(terrain_3d_engine ka_terrain_3d_tests)
 
+  add_executable(ka_strata3d_link_tests tests/test_strata3d_link.cpp src/app/KaStrata3dLink.cpp src/app/KaStrata3dLink.h)
+  target_link_libraries(ka_strata3d_link_tests PRIVATE ${KA_TEST_LIBS} Qt6::Network)
+  target_include_directories(ka_strata3d_link_tests PRIVATE ${KA_INCLUDES})
+  target_link_directories(ka_strata3d_link_tests PRIVATE ${KA_LIBDIRS})
+  target_compile_definitions(ka_strata3d_link_tests PRIVATE ${KA_TEST_DEFS})
+  if (MSVC)
+    target_compile_options(ka_strata3d_link_tests PRIVATE /utf-8)
+  endif()
+  ka_add_qtest(strata3d_link ka_strata3d_link_tests)
+
   # Console subsystem, otherwise QtTest PASS/FAIL lines never reach ctest.
   set_target_properties(ka_hgis_tests ka_workflow_tests ka_georef_tests ka_preset_tests
                         ka_buffer_tests ka_measure_tests ka_dem_trench_tests
-                        ka_terrain_3d_tests
+                        ka_terrain_3d_tests ka_strata3d_link_tests
                         PROPERTIES WIN32_EXECUTABLE FALSE)
 
 
@@ -2053,7 +2067,7 @@ if(KA_HGIS_BUILD_TESTS)
       "${OSGEO4W_ROOT}/bin"
     )
     string(JOIN "\\;" _ka_path_esc ${_ka_path})
-    set_tests_properties(layer_labels layer_information checklist_engine workflow_engine georef_engine feature_presets buffer_ring measure_tape dem_trench_engine theme_qss user_error recent_surveys terrain_3d_engine ${KA_SAVE_OPEN_TESTS} e2e_opaque_suite network_services storage_safety reference_download region_locator_popup layer_state_regressions map_render above_labels above_labels_125 above_labels_150 above_labels_200 PROPERTIES
+    set_tests_properties(layer_labels layer_information checklist_engine workflow_engine georef_engine feature_presets buffer_ring measure_tape dem_trench_engine theme_qss user_error recent_surveys terrain_3d_engine strata3d_link ${KA_SAVE_OPEN_TESTS} e2e_opaque_suite network_services storage_safety reference_download region_locator_popup layer_state_regressions map_render above_labels above_labels_125 above_labels_150 above_labels_200 PROPERTIES
       ENVIRONMENT "GDAL_DATA=${OSGEO4W_ROOT}/apps/gdal-dev/share/gdal;PATH=${_ka_path_esc};QGIS_PREFIX_PATH=${QGIS_PREFIX_PATH};QT_QPA_PLATFORM=offscreen")
     # A relative configfile: Qt splits the platform string at ':', so C:\... would break it (docs/ERROR_REGRESSION.md).
     set_tests_properties(save_open_monitor PROPERTIES ENVIRONMENT "GDAL_DATA=${OSGEO4W_ROOT}/apps/gdal-dev/share/gdal;PATH=${_ka_path_esc};QGIS_PREFIX_PATH=${QGIS_PREFIX_PATH};QT_QPA_PLATFORM=offscreen:configfile=cmake/offscreen-2560.json")
@@ -2108,7 +2122,7 @@ if(KA_HGIS_BUILD_TESTS)
     string(SUBSTRING "${_ka_test_temp_id}" 0 12 _ka_test_temp_id)
     foreach(_ka_test IN ITEMS checklist_engine workflow_engine georef_engine feature_presets
         buffer_ring measure_tape dem_trench_engine theme_qss recent_surveys
-        terrain_3d_engine ${KA_SAVE_OPEN_TESTS} e2e_opaque_suite network_services
+        terrain_3d_engine strata3d_link ${KA_SAVE_OPEN_TESTS} e2e_opaque_suite network_services
         storage_safety reference_download region_locator_popup layer_state_regressions map_render
         above_labels above_labels_125 above_labels_150 above_labels_200 dem_presentation
         export_survey_areas perf_engine parallel_render catch_log cadastral)

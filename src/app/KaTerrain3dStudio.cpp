@@ -1,5 +1,6 @@
 #include "KaCrashGuard.h"
 #include "core/KaLogExcept.h"
+#include "KaStrata3dLink.h"
 #include "KaTerrain3dStudio.h"
 #include "KaUserError.h"
 
@@ -22,10 +23,8 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
-#include <QShowEvent>
 #include <QTimer>
 #include <QVBoxLayout>
-#include <QVector>
 
 #include <qgscoordinatereferencesystem.h>
 #include <qgspointxy.h>
@@ -123,6 +122,7 @@ KaTerrain3dStudio::KaTerrain3dStudio(QgsProject* project, QgsMapCanvas* canvas, 
   m_status->setObjectName(QStringLiteral("terrain3dStatus"));
   vl->addWidget(m_status);
   vl->addStretch(1);
+  new KaStrata3dLink(vl, m_status, m_project, this);
 
   m_view = new KaTerrain3dView(this);
   m_view->setObjectName(QStringLiteral("terrain3dView"));
