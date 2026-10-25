@@ -48,7 +48,7 @@ def analyze(db: Path) -> dict:
     zero_q = [r[0] for r in zero_q]
     missing = conn.execute(
         """SELECT node_id,title,authors,journal,year FROM papers
-           WHERE abstract='' AND (ai_summary IS NULL OR ai_summary='')
+           WHERE abstract='' AND (ai_summary IS NULL OR ai_summary='') AND relevance=1
            ORDER BY CASE WHEN journal IN ('신라문화','신라사학보','신라문물연구','경주사학',
                                           '한국고고학보','야외고고학','고고학','보존과학회지','문화재')
                          THEN 0 ELSE 1 END,

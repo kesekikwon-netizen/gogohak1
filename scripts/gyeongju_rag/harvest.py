@@ -161,20 +161,10 @@ def paper_from_item(it: dict) -> dict:
 
 
 def is_relevant(p: dict, query: str) -> tuple[int, str]:
-    text = " ".join([p.get("title", ""), p.get("abstract", ""), p.get("journal", ""),
-                     " ".join(p.get("keywords") or [])])
-    has_arch = any(t in text for t in seeds.ARCH_TERMS)
-    if any(t in text for t in seeds.RACE_NEGATIVE) and not has_arch:
-        return 0, "스포츠·자동차 경주 오검색"
-    if any(t in text for t in ["경주", "서라벌", "왕경", "계림", "동경", "慶州", "新羅", "鷄林", "徐羅伐"]):
-        return 1, ""
-    if any(s in text for s in seeds.SITES if len(s) >= 3):
-        return 1, ""
-    if any(j in text for j in seeds.JOURNALS):
-        return 1, ""
-    if "경주" in query and any(u in text for u in seeds.LEGAL_DONG + seeds.LEGAL_RI):
-        return 1, ""
-    return 0, "경주 관련 표지 없음"
+    import relevance
+
+    return relevance.classify(p.get("title", ""), p.get("abstract", ""),
+                              p.get("journal", ""))
 
 
 def expand_from_papers(conn, papers: list[dict], max_add: int = 10) -> int:

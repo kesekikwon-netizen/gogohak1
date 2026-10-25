@@ -87,8 +87,10 @@ def drain_pools(db: str, per_round: int) -> int:
         if not p.exists():
             continue
         done = {r[0] for r in conn.execute("SELECT question FROM ai_turns")}
+        irr = import_ai.load_irrelevant_titles()
         qs = [l.strip() for l in p.read_text(encoding="utf-8").splitlines()
-              if l.strip() and l.strip() not in done]
+              if l.strip() and l.strip() not in done
+              and not (irr and any("「" + t + "」" in l for t in irr))]
         log(f"[pool:{name}] 남은 {len(qs)}건")
         for i in range(0, len(qs), per_round):
             batch = qs[i:i + per_round]

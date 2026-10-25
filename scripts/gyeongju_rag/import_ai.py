@@ -9,9 +9,18 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import relevance  # noqa: E402
 import store  # noqa: E402
 
 DEFAULT_IN = Path("/mnt/data-drawing/gyeongju_rag/ai_answers.jsonl")
+
+
+def load_irrelevant_titles() -> set:
+    p = DEFAULT_IN.parent / "irrelevant_titles.json"
+    try:
+        return set(json.loads(p.read_text(encoding="utf-8")))
+    except (OSError, json.JSONDecodeError):
+        return set()
 
 
 def refs_from_links(links: list[dict]) -> list[dict]:
@@ -38,6 +47,8 @@ def import_file(path: Path, db: Path) -> dict:
     if not path.exists():
         print(f"파일 없음: {path}")
         return store.stats(conn)
+    irr = load_irrelevant_titles()
+    skipped_irr = 0
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
@@ -48,6 +59,9 @@ def import_file(path: Path, db: Path) -> dict:
             continue
         q = str(rec.get("question") or "").strip()
         if not q:
+            continue
+        if irr and any("「" + t + "」" in q for t in irr):
+            skipped_irr += 1
             continue
         turn_id = store.add_ai_turn(conn, q, str(rec.get("answer") or ""),
                                     refs_from_links(rec.get("links") or []),
@@ -65,7 +79,7 @@ def import_file(path: Path, db: Path) -> dict:
         if n % 20 == 0:
             conn.commit()
     conn.commit()
-    print(f"{n}건 가져옴 -> {db}")
+    print(f"{n}건 가져옴 -> {db} (무관 제외 {skipped_irr}건)")
     return store.stats(conn)
 
 
