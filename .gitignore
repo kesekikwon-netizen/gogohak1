@@ -45,6 +45,7 @@ Desktop.ini
 !.agents/skills/heritage-intranet/
 !.agents/skills/ka-hgis-sheet/
 !.agents/skills/ka-hgis-verify/
+!.agents/skills/gyeongju-rag-collect/
 # Claude Code: share project config, keep per-PC state local
 .claude/*
 !.claude/settings.json
