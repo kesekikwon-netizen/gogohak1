@@ -79,6 +79,8 @@ def login_ok() -> bool:
 
 def drain_pools(db: str, per_round: int) -> int:
     """정적 풀을 순서대로 소진한다. 배치마다 DB 반영 후 증가 없으면 중단."""
+    import re as _re
+
     total = 0
     conn = store.connect(db)
     prev = snap(conn)
@@ -88,9 +90,20 @@ def drain_pools(db: str, per_round: int) -> int:
             continue
         done = {r[0] for r in conn.execute("SELECT question FROM ai_turns")}
         irr = import_ai.load_irrelevant_titles()
-        qs = [l.strip() for l in p.read_text(encoding="utf-8").splitlines()
-              if l.strip() and l.strip() not in done
-              and not (irr and any("「" + t + "」" in l for t in irr))]
+        # 이미 요약이 들어간 논문은 「제목」 질문에서 제외 (1단계와 중복 방지)
+        summarized = {r[0] for r in conn.execute(
+            "SELECT title FROM papers WHERE ai_summary IS NOT NULL AND ai_summary<>''")}
+        qs = []
+        for line in p.read_text(encoding="utf-8").splitlines():
+            l = line.strip()
+            if not l or l in done:
+                continue
+            if irr and any("「" + t + "」" in l for t in irr):
+                continue
+            m = _re.search(r"「(.+?)」", l)
+            if m and m.group(1) in summarized:
+                continue
+            qs.append(l)
         log(f"[pool:{name}] 남은 {len(qs)}건")
         for i in range(0, len(qs), per_round):
             batch = qs[i:i + per_round]
