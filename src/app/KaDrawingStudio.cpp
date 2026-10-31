@@ -375,17 +375,24 @@ KaDrawingStudio::KaDrawingStudio(QgsProject* project, QgsMapCanvas* mapCanvas,
   resize(1280, 860);
   ensureLayoutGuiRegistered(mapCanvas);
   const auto* savedLayout = layout();
-  if (!savedLayout) ensureBlankLayout();
-  else LayoutService::ensureLayoutPage(layout(), m_paperW, m_paperH);
+  if (!savedLayout) {
+    ensureBlankLayout();
+  } else {
+    if (savedLayout->pageCollection() && savedLayout->pageCollection()->pageCount() > 0) {
+      const auto sz = savedLayout->renderContext().measurementConverter().convert(
+          savedLayout->pageCollection()->page(0)->pageSize(), Qgis::LayoutUnit::Millimeters);
+      if (sz.width() >= 20.0 && sz.height() >= 20.0) { m_paperW = sz.width(); m_paperH = sz.height(); }
+    }
+    LayoutService::ensureLayoutPage(layout(), m_paperW, m_paperH);
+  }
   buildUi();
   if (savedLayout) {
     connectMapSignals(mapItem());
-    if (isLegacyA4LandscapeMm(m_paperW, m_paperH))
-      applyFieldPageGrow();
-    else {
-      zoomPaperVisible();
-      ensureStandardDecorations();
-    }
+    if (qAbs(m_paperW - paperWidthMm) > 0.5 || qAbs(m_paperH - paperHeightMm) > 0.5)
+      resetPaper(paperWidthMm, paperHeightMm, true);
+    if (isLegacyA4LandscapeMm(m_paperW, m_paperH)) applyFieldPageGrow();
+    zoomPaperVisible();
+    ensureStandardDecorations();
   } else {
     autoPlaceDefaultSheet();
   }
@@ -466,19 +473,17 @@ void KaDrawingStudio::resetPaper(double widthMm, double heightMm, bool preserveE
   // ── 기존 도면 요소 및 지도 범위 보존하면서 용지 크기/방향 전환 ──
   endActivateMap();
 
-  const double oldW = m_paperW;
-  const double oldH = m_paperH;
+  double oldW = m_paperW, oldH = m_paperH;
+  if (ly->pageCollection() && ly->pageCollection()->pageCount() > 0) {
+    const auto curSz = ly->renderContext().measurementConverter().convert(
+        ly->pageCollection()->page(0)->pageSize(), Qgis::LayoutUnit::Millimeters);
+    if (curSz.width() >= 20.0 && curSz.height() >= 20.0) { oldW = curSz.width(); oldH = curSz.height(); }
+    ly->pageCollection()->page(0)->setPageSize(QgsLayoutSize(widthMm, heightMm, Qgis::LayoutUnit::Millimeters));
+  }
   m_paperW = widthMm;
   m_paperH = heightMm;
-
-  const double dw = m_paperW - oldW;
-  const double dh = m_paperH - oldH;
-
-  // 1. QGIS Layout 페이지 크기 변경
-  if (ly->pageCollection() && ly->pageCollection()->pageCount() > 0) {
-    ly->pageCollection()->page(0)->setPageSize(
-        QgsLayoutSize(m_paperW, m_paperH, Qgis::LayoutUnit::Millimeters));
-  }
+  const double dw = m_paperW - oldW, dh = m_paperH - oldH;
+  const QRectF oldPageRect(0.0, 0.0, oldW, oldH);
 
   // 2. 지도 중심 좌표, 축척, CRS 보존
   const QgsRectangle curExt = map->extent();
@@ -501,33 +506,33 @@ void KaDrawingStudio::resetPaper(double widthMm, double heightMm, bool preserveE
   map->zoomToExtent(nextExt);
   if (mapScale > 1.0)
     map->setScale(mapScale, true);
+  syncAboveLabelsMap(map);
   map->invalidateCache();
   map->refresh();
 
-  // 4. 부속 장식 요소 (방위표, 축척자, 범례, 축척 라벨, 좌표계 라벨 등) 상대 이동 및 클램핑
+  // 4. 부속 장식 요소 상대 이동 및 표준 크롬 재배치
   for (QGraphicsItem* gi : ly->items()) {
     auto* item = dynamic_cast<QgsLayoutItem*>(gi);
-    if (!item || item == map) continue;
+    if (!item || dynamic_cast<QgsLayoutItemPage*>(item) || dynamic_cast<QgsLayoutItemMap*>(item))
+      continue;
+    if (isSheetDecoration(item)) {
+      item->setCustomProperty(QStringLiteral("ka_hgis/chrome_placed"), false);
+      continue;
+    }
 
     const QRectF itemBox = itemPaperRect(item);
+    if (!oldPageRect.adjusted(-2.0, -2.0, 2.0, 2.0).contains(itemBox.center()))
+      continue;
     const QPointF pos = itemBox.topLeft();
     const QSizeF sz = itemBox.size();
 
     double newX = pos.x();
     double newY = pos.y();
+    if (pos.y() > oldH * 0.55) newY += dh;
+    if (pos.x() > oldW * 0.5) newX += dw;
 
-    // 하단 영역(oldH의 55% 이상 위치)에 있던 아이템은 Y 오프셋(dh)만큼 아래로 이동
-    if (pos.y() > oldH * 0.55) {
-      newY += dh;
-    }
-    // 우측 영역(oldW의 50% 이상 위치)에 있던 아이템은 X 오프셋(dw)만큼 우측으로 이동
-    if (pos.x() > oldW * 0.5) {
-      newX += dw;
-    }
-
-    // 용지 영역 벗어남 방지 (클램핑)
-    const double maxX = std::max(0.0, m_paperW - sz.width() - 4.0);
-    const double maxY = std::max(0.0, m_paperH - sz.height() - 4.0);
+    const double maxX = std::max(4.0, m_paperW - sz.width() - 4.0);
+    const double maxY = std::max(4.0, m_paperH - sz.height() - 4.0);
     newX = std::clamp(newX, 4.0, maxX);
     newY = std::clamp(newY, 4.0, maxY);
 
@@ -543,6 +548,7 @@ void KaDrawingStudio::resetPaper(double widthMm, double heightMm, bool preserveE
   m_paperFitPending = true;
   zoomPaperVisible();
   relinkDecorations();
+  applyStandardChromePositions();
   syncScaleDecorations();
   ly->refresh();
 
@@ -2137,7 +2143,11 @@ void KaDrawingStudio::applyLayersToMap(QgsLayoutItemMap* map, bool includeLiveBa
   }
   map->setKeepLayerSet(true);
   map->setFollowVisibilityPreset(false);
-  if (map->layers() != layers) map->setLayers(layers);
+  if (map->layers() != layers) {
+    map->setLayers(layers);
+    map->invalidateCache();
+    map->refresh();
+  }
   const QgsCoordinateReferenceSystem crs = studioMapCrs(m_mapCanvas, m_project);
   if (crs.isValid() && crs != map->crs())
     map->setCrs(crs);
@@ -2630,7 +2640,10 @@ void KaDrawingStudio::flushLayerSync() {
     syncHeritageNumbers();
     if (auto* legend = dynamic_cast<QgsLayoutItemLegend*>(findItemById(layout(), kIdLegend))) {
       if (legend->model() && legend->model()->rootGroup()) {
-        const auto live = map->layers();
+        QList<QgsMapLayer*> live = map->layers();
+        if (auto* top = dynamic_cast<QgsLayoutItemMap*>(findItemById(layout(), kIdMapAbove))) {
+          for (auto* l : top->layers()) if (l && !live.contains(l)) live.append(l);
+        }
         QList<QgsLayerTreeLayer*> drop;
         QSet<QString> shown;
         for (auto* node : legend->model()->rootGroup()->findLayers()) {
@@ -2646,15 +2659,19 @@ void KaDrawingStudio::flushLayerSync() {
         }
         bool missing = false;
         for (auto* layer : live) {
-          if (!layer || shown.contains(layer->id()) || !m_project) continue;
+          if (!layer || layer == m_blankMapLayer || shown.contains(layer->id()) || !m_project) continue;
+          if (LayoutService::sheetLegendOmitsLayerName(layer->name()) ||
+              layer->customProperty(QStringLiteral("ka_hgis/omit_sheet_legend")).toBool() ||
+              layer->providerType() == QLatin1String("wms") || layer->providerType() == QLatin1String("xyz"))
+            continue;
           auto* treeNode = m_project->layerTreeRoot()->findLayer(layer->id());
-          auto* parent = treeNode ? treeNode->parent() : nullptr;
-          if (parent && HeritageStyle::fromLayerName(parent->name())) missing = true;
+          if (!treeNode || !treeNode->isVisible()) continue;
+          if (!LayerLabelControls::isHeritage(layer)) { missing = true; break; }
         }
         if (missing) {
           LayoutService::tuneSheetLegend(legend);
           m_heritageNumbers.applyLegend(legend);
-        }
+        } else if (!drop.isEmpty()) { LayoutService::flowSheetLegend(legend); legend->update(); }
       }
     }
   }
@@ -2718,10 +2735,12 @@ void KaDrawingStudio::applyStandardChromePositions() {
   const QRectF equalized = current.width() >= page.width() * 0.65
                                ? defaultMapRect()
                                : LayoutService::equalFullSheetMapRect(page, current);
+  bool mapChanged = false;
   if (qAbs(equalized.left() - current.left()) > 0.5 ||
       qAbs(equalized.top() - current.top()) > 0.5 ||
       qAbs(equalized.width() - current.width()) > 0.5 ||
       qAbs(equalized.height() - current.height()) > 0.5) {
+    mapChanged = true;
     const QgsRectangle ext = map->extent();
     const double scale = map->scale();
     map->attemptMove(QgsLayoutPoint(equalized.x(), equalized.y(), Qgis::LayoutUnit::Millimeters));
@@ -2731,7 +2750,17 @@ void KaDrawingStudio::applyStandardChromePositions() {
       map->zoomToExtent(ext);
     if (scale > 1.0)
       map->setScale(scale, true);
+    syncAboveLabelsMap(map);
   }
+  const QRectF pageBounds = page.adjusted(-1.0, -1.0, 1.0, 1.0);
+  bool anyChromeOffPage = false;
+  for (const char* id : {kIdScaleBar, kIdScale, kIdCrs, kIdNorth}) {
+    if (auto* it = findItemById(ly, id); it && !pageBounds.contains(itemPaperRect(it))) anyChromeOffPage = true;
+  }
+  auto needsChromePlace = [&](QgsLayoutItem* it) {
+    return it && (!it->customProperty(QStringLiteral("ka_hgis/chrome_placed"), false).toBool() ||
+                  mapChanged || !pageBounds.contains(itemPaperRect(it)));
+  };
   const auto chrome = LayoutService::standardSheetChrome(page, itemPaperRect(map));
   QRectF bar = chrome.scaleBar;
   if (auto* sb = dynamic_cast<QgsLayoutItemScaleBar*>(findItemById(ly, kIdScaleBar))) {
@@ -2744,7 +2773,7 @@ void KaDrawingStudio::applyStandardChromePositions() {
     const double maxW = std::max(32.0, chrome.crs.left() - 4.0 - chrome.scaleBar.left());
     if (wantW >= 32.0)
       bar.setWidth(std::clamp(wantW, 32.0, maxW));
-    if (!sb->customProperty(QStringLiteral("ka_hgis/chrome_placed"), false).toBool()) {
+    if (needsChromePlace(sb)) {
       compactSheetScaleBar(sb);
       sb->setReferencePoint(QgsLayoutItem::UpperLeft);
       sb->attemptSetSceneRect(bar);
@@ -2764,7 +2793,7 @@ void KaDrawingStudio::applyStandardChromePositions() {
   label.setHeight(7.0);
   label.moveTop(bar.bottom() + 2.5);
   if (auto* sc = findItemById(ly, kIdScale)) {
-    if (!sc->customProperty(QStringLiteral("ka_hgis/chrome_placed"), false).toBool()) {
+    if (needsChromePlace(sc)) {
       sc->setReferencePoint(QgsLayoutItem::UpperLeft);
       if (auto* scaleLbl = dynamic_cast<QgsLayoutItemLabel*>(sc)) {
         scaleLbl->setHAlign(Qt::AlignHCenter);
@@ -2776,18 +2805,25 @@ void KaDrawingStudio::applyStandardChromePositions() {
     sc->setLocked(false);
   }
   if (auto* crs = findItemById(ly, kIdCrs)) {
-    if (!crs->customProperty(QStringLiteral("ka_hgis/chrome_placed"), false).toBool()) {
+    if (needsChromePlace(crs)) {
       crs->attemptSetSceneRect(chrome.crs);
       crs->setCustomProperty(QStringLiteral("ka_hgis/chrome_placed"), true);
     }
     crs->setLocked(false);
   }
   if (auto* north = findItemById(ly, kIdNorth)) {
-    if (!north->customProperty(QStringLiteral("ka_hgis/chrome_placed"), false).toBool()) {
+    if (needsChromePlace(north)) {
       north->attemptSetSceneRect(chrome.north);
       north->setCustomProperty(QStringLiteral("ka_hgis/chrome_placed"), true);
     }
     north->setLocked(false);
+  }
+  if ((mapChanged || anyChromeOffPage) && findItemById(ly, kIdLegend)) {
+    auto* legend = dynamic_cast<QgsLayoutItemLegend*>(findItemById(ly, kIdLegend));
+    if (legend && itemPaperRect(legend).top() > page.bottom() + 2.0) {
+      legend->setCustomProperty(QStringLiteral("ka_hgis/legend_kept_on_page"), false);
+      relinkDecorations();
+    }
   }
 }
 
@@ -3353,8 +3389,11 @@ bool KaDrawingStudio::eventFilter(QObject* watched, QEvent* event) {
             ly->undoStack()->stack()->index() != pressUndoIndex) {
           markUserComposed();
           // 범례를 놓은 자리가 이긴다: 용지 밖이어도 도면을 다시 이을 때(relinkDecorations) 기본 자리로 되돌리지 않는다.
-          if (auto* legend = findItemById(ly, kIdLegend))
-            legend->setCustomProperty(QStringLiteral("ka_hgis/legend_kept_on_page"), true);
+          if (auto* legend = findItemById(ly, kIdLegend)) {
+            if (legend->isSelected() ||
+                !QRectF(0.0, 0.0, m_paperW, m_paperH).contains(itemPaperRect(legend).center()))
+              legend->setCustomProperty(QStringLiteral("ka_hgis/legend_kept_on_page"), true);
+          }
         }
       }
       if (property("ka_interacting").toBool()) return;
